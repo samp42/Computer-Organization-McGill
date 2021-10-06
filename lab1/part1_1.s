@@ -7,6 +7,7 @@ _start:
     mov a1, #1
     mov a2, #0
     mov v1, #n
+    sub v1, v1, #1
     cmp v1, #0
 	
 loop:

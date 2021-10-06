@@ -24,9 +24,9 @@ kx:
 gx: .space 400
 
 // image width
-.equ iw, 0xa
+.equ iw, 10
 // image height
-.equ ih, 0xa
+.equ ih, 10
 // kernel width
 .equ kw, 5
 // kernel height
@@ -145,7 +145,7 @@ j_loop:
 	bgt else
 	
 	push {v1, v2}
-	@ kx[j][i] = #kx + (j*10 + i) * 4
+	@ kx[j][i] = #kx + (j*5 + i) * 4
 	mov v1, #kx
 	mov v2, #5
 	mla v2, v4, v2, v3
@@ -194,20 +194,3 @@ end:
 	b end
 .end
 
-// 2D Convolution Algorithm
-for (int y = 0; y < ih ; y++) {
-  for (int x = 0; x < iw ; x++) {
-    int sum = 0;
-    for (int i = 0; i < kw ; i++) {
-      for (int j = 0; j < kh ; j++) {
-        int temp1 = x+j -kws;
-        int temp2 = y+i -khs;
-        if (temp1>=0 && temp1<=9 && temp2>=0 && temp2<=9)
-          sum = sum + kx[j][i] * fx [temp1][temp2];
-      }
-    }
-
-    gx[x][y] = sum;
-  }
-}
-	
