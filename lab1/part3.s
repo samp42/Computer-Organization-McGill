@@ -8,17 +8,20 @@ _start:
 	sub a1, a1, #1 @ size - 1
 	mov v1, #0 @ step
 	
-	push {a3-a4, v1-v6, lr}
+	push {lr}
 	bl first_loop
-	pop {a3-a4, v1-v6, lr}
+	pop {lr}
 	
 	b end
 	
 first_loop:
+	push {v1-v6}
 	cmp v1, a1
+	
+	popge {v1-v6}
 	bxge lr
 	
-	push {alr}
+	push {lr}
 	bl second_loop
 	pop {lr}
 	
@@ -50,30 +53,9 @@ second_loop:
 	str v6, [v3]
 	
 no_swap:
-	add r10, r10, #1
-	
 	add v2, v2, #1 @ i++
 	b second_loop
 	
 end:
 	b end
 .end
-int size = 5;
-int array[] = {-1, 23, 0, 12, -7};
-int *ptr = &array[0];
-
-// Bubble sort algorithm
-for (int step = 0; step < size - 1; step++) {
-  for (int i = 0; i < size - step - 1; i++) {
-
-    // Sorting in ascending order.
-    // To sort in descending order, change ">" to "<".
-    if (*(ptr + i) > *(ptr + i + 1)) {
-      // Swap if the larger element is in a later position.
-      int tmp = *(ptr + i);
-      *(ptr + i) = *(ptr + i + 1);
-      *(ptr + i + 1) = tmp;
-    }
-  }
-}
-// Output: Array = {-7,  -1,  0,  12,  23}
