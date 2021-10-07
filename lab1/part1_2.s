@@ -5,10 +5,9 @@
 _start:
 	
     mov a1, #0
-    mov a3, #0
     mov a2, #1
+	mov a3, #1
     ldr a4, n
-    sub a4, a4, #1
 	
     push {lr}
 
@@ -21,19 +20,29 @@ _start:
     b end
 	
 fib:
-    @ compute sum of 2 previous numbers in a1
-    add a1, a2, a3
-    @ n-2 <- n-1
-    mov a3, a2
-    @ n-1 <- n
-    mov a2, a1
-    
-    subs a4, a4, #1
-    bgt fib
 	
+	@ <= 1 ?
+	cmp a4, #1
+	addle a2, a2, a3
+	ble exit
+	
+	@ fib(n-1)
+	sub a4, a4, #1
+	push {lr}
+	bl fib
+	pop {lr}
+	add a1, a1, a2
+	
+	@ fib(n-2)
+	sub a4, a4, #1
+	push {lr}
+	bl fib
+	pop {lr}
+	add a1, a1, a2
+	
+exit:	
     bx lr
 	
 end:
     b end
 .end
-
