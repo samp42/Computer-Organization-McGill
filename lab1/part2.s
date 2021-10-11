@@ -157,7 +157,7 @@ j_loop:
 	
 	
 	@ &fx[temp1][temp2] = #fx + (temp1*10 + temp2) * 4
-	mov v2, #5
+	mov v2, #10
 	mla v2, v6, v2, v7
 	mov v7, #fx
 	mla v2, v2, v8, v7
@@ -193,4 +193,3 @@ else:
 end:
 	b end
 .end
-
