@@ -1,11 +1,22 @@
 .data
 // switch
 .equ SW_MEMORY, 0xFF200040
+// filter to read only SW3-SW0
+.equ SW_digit, 0x0000000f
 
 // LEDs
 .equ LED_MEMORY, 0xFF200000
 
-// hex
+// HEX
+.equ HEX0_MEMORY, 0xFF200020
+.equ HEX5_MEMORY, 0xFF200030
+
+.equ HEX_ON, 0x0000007f
+.equ HEX_OFF, 0x0000000
+// used to turn off a single display
+// ROR, #2 to turn off other display
+.equ HEX_FILTER, 0xffffff00
+
 .equ HEX0, 0x00000001
 .equ HEX1, 0x00000002
 .equ HEX2, 0x00000004
@@ -31,10 +42,14 @@ loop:
 	@ endless loop
 	
 	@ read switches
+	PUSH {LR}
 	BL read_slider_switches_ASM
+	POP {LR}
 	
 	@ write LEDs
+	PUSH {LR}
 	BL write_LEDs_ASM
+	POP {LR}
 	
 	B loop
 
@@ -43,6 +58,13 @@ read_slider_switches_ASM:
 	PUSH {R1}
     LDR R1, =SW_MEMORY
     LDR R0, [R1]
+	@ SW9 clears all the displays if 1
+	CMP R0, #0x200
+	PUSH {R0}
+	@ write indices of all hex displays in R0
+	BLGE HEX_clear_ASM
+	POP {R0}
+	
 	POP {R1}
     BX LR
 	
@@ -54,13 +76,15 @@ write_LEDs_ASM:
 	POP {R1}
     BX LR
 	
-	
-@ turn ON all segments of HEX displays passed as argument
-@ argument: sum of indices of HEX displays in R0
-HEX_clear_ASM:
-
-
 @ turn OFF all segments of HEX displays passed as argument
+@ argument: sum of indices of HEX displays in R0	
+HEX_clear_ASM:
+	PUSH {R1}
+	
+	POP {R1}
+	BX LR
+
+@ turn ON all segments of HEX displays passed as argument
 @ argument: sum of indices of HEX displays in R0
 HEX_flood_ASM:
 
@@ -69,6 +93,7 @@ HEX_flood_ASM:
 @ argument: index of HEX display in R0
 @ argument: value to display in R1
 HEX_write_ASM:
+	@ flood HEX4, HEX5
 
 
 	
