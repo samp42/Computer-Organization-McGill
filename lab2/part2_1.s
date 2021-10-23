@@ -1,9 +1,9 @@
 .data
 // counter
-.equ LOAD_MEM, 0xFFFEC600
-.equ COUNTER_MEM, 0xFFFEC604
-.equ CONTROL_MEM, 0xFFFEC608
-.equ ISR_MEM, 0xFFFEC60C
+.equ LOAD_MEMORY, 0xFFFEC600
+.equ COUNTER_MEMORY, 0xFFFEC604
+.equ CONTROL_MEMORY, 0xFFFEC608
+.equ ISR_MEMORY, 0xFFFEC60C
 .equ PRESCALER_VALUE, 0x4
 
 .equ LOAD_VALUE, 0x0000000f
@@ -14,9 +14,9 @@
 
 .equ HEX_ON, 0x0000007f
 .equ HEX_OFF, 0x0000000
-// used to turn off a single display
-// ROR, #2 to turn off other display
-.equ HEX_FILTER, 0xffffff00
+
+// LED
+.equ LED_MEMORY, 0xFF200000
 
 .equ HEX0, 0x0000003f
 .equ HEX1, 0x00000006
@@ -33,46 +33,76 @@
 .global _start
 _start:
 
+	@ count value
+	MOV R4, #0
+	
 	@ control register
 	LDR R0, =PRESCALER_VALUE
 	@ I bit
-	MOV R4, #1
-	LSL R4, #2
-	@ A bit
 	MOV R5, #1
-	LSL R5, #1
-	ADD R4, R5
+	LSL R5, #2
+	@ A bit
+	MOV R6, #1
+	LSL R6, #1
+	ADD R5, R6
 	@ E bit
-	ADD R4, #1
+	ADD R5, #1
 	@ prescaler
 	@ TODO: shift prescaler
-	ADD R1, R4, #PRESCALER_VALUE
+	MOV R6, #PRESCALER_VALUE
+	LSL R6, #8
+	ADD R1, R5, R6
+	
+	PUSH {LR}
+	BL ARM_TIM_config_ASM
+	POP {LR}
+	
+LOOP:
+	PUSH {LR}
+	BL ARM_TIM_read_INT_ASM
+	CMP R0, #0xf
+	
+	@ if f == 1, increment count value
+	ADDGE R4, #1
+	POP {LR}
+	
+	CMP R4, #0xf
+	
+	@ reset count value when 15
+	MOV R4, #0
+	MOV R0, R4
+	PUSH {LR}
+	BL LED_write_ASM
+	POP {LR}
+	
+	B LOOP
 	
 @ R0: Load value
 @ R1: configuration bits in control register
 ARM_TIM_config_ASM:
 	PUSH {R4}
 	@ get load value and load it in load register
-	LDR R4, =LOAD_MEM
+	LDR R4, =LOAD_MEMORY
 	STR R0, [R4]
 	@ setup control register
-	LDR R4, =CONTROL_MEM
+	LDR R4, =CONTROL_MEMORY
 	STR R1, [R4]
 	POP {R4}
 	BX LR
 
 @ get F bit
 ARM_TIM_read_INT_ASM:
-	LDR R0, =ISR_MEM
+	LDR R0, =ISR_MEMORY
 	LDR R0, [R0]
 	BX LR
 
 @ clears F bit to 0
 ARM_TIM_clear_INT_ASM:
-	PUSH {R4}
+	PUSH {R4, R5}
 	LDR R4, =ISR_MEM
 	MOV R5, #0x00000001
 	STR R5, [R4]
+	POP {R4, R5}
 	BX LR
 
 @ writes time on HEX displays
@@ -97,7 +127,10 @@ HEX_add_ASM:
 	
 @ R0: number
 LED_write_ASM:
-
+	PUSH {R4}
+	LDR R4, =LED_MEMORY
+	STR R0, [R4]
+	POP {R4}
 	BX LR
 
 end:

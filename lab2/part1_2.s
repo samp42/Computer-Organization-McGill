@@ -13,16 +13,9 @@
 
 .equ HEX_ON, 0x0000007f
 .equ HEX_OFF, 0x0000000
-// used to turn off a single display
-// ROR, #2 to turn off other display
-.equ HEX_FILTER, 0xffffff00
 
-.equ HEX0, 0x00000001
-.equ HEX1, 0x00000002
-.equ HEX2, 0x00000004
-.equ HEX3, 0x00000008
-.equ HEX4, 0x00000010
-.equ HEX5, 0x00000020
+HEX_VALUE:
+.word 0x0000003f, 0x00000006, 0x0000005b, 0x0000004f, 0x00000066, 0x0000006d, 0x0000007d, 0x00000007, 0x0000007f, 0x0000006f
 
 // push buttons
 .equ PB0, 0x00000001
@@ -31,14 +24,20 @@
 .equ PB3, 0x00000008
 
 .text
+
 .global _start
 _start:
+	MOV R0, #0
 	
-	BL loop
+	PUSH {LR}
+	BL HEX_write_ASM
+	POP {LR}
 	
-	B end
+	B LOOP
+	
+	B END
 
-loop:
+LOOP:
 	@ endless loop
 	
 	@ read switches
@@ -51,7 +50,13 @@ loop:
 	BL write_LEDs_ASM
 	POP {LR}
 	
-	B loop
+	@ write HEX
+	PUSH {LR}
+	BL HEX_write_ASM
+	POP {LR}
+	ADD R0, #1
+	
+	B LOOP
 
 @ reads the value of the switches in stores it in R0
 read_slider_switches_ASM:
@@ -94,7 +99,64 @@ HEX_flood_ASM:
 @ argument: value to display in R1
 HEX_write_ASM:
 	@ flood HEX4, HEX5
+	PUSH {R0, R4-R7}
+	LDR R4, =HEX4_MEMORY
+	LDR R5, =HEX_ON
+	MOV R6, R5
+	LSL R5, #8
+	ADD R5, R6
+	STR R5, [R4]
+	
+	@ for every digit, load proper value in HEX0_MEMORY
+	LDR R6, =HEX0_MEMORY
+	MOV R4, #0xFF
+	@ rotate value
+	MOV R5, #-8
+	@ loop counter
+	MOV R7, #4
+	
+HEX_write_loop:
+	@ rotate input
+	ROR R0, R0, R5
+	@ apply mask
+	AND R2, R0, R4
+	
+	PUSH {LR}
+	BL write_segment_ASM
+	POP {LR}
+	
+	@ i--
+	SUBS R7, #1
+	BGT HEX_write_loop
+	@ loop ended
+	
+	POP {R0, R4-R7}
+	BX LR
+	
 
+@ inner subroutine for HEX_write_ASM
+@ loops through every digit 0..<9 to determine what number to output
+@ moves the result in R6 and shifts the mask and the result
+@ R2: masked input
+@ R6: result register (result is value to HEX data register (segments info))
+write_segment_ASM:
+	PUSH {R4-R5}
+	MOV R4, #9
+	LDR R5, =HEX_VALUE
+	
+segment_loop:
+	CMP R2, R4
+	@ if equal, we have found the number, load it
+	BEQ number_found
+	@ j--
+	SUBS R4, #1
+	BGE segment_loop
+	
+number_found:
+	lDR R6, [R5, R4]
+	
+	POP {R4-R5}
+	BX LR
 
 	
 @ returns indices of pressed push buttons
@@ -120,5 +182,5 @@ disable_PB_INT_ASM:
 
 
 
-end:
+END:
 	.end
