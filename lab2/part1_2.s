@@ -28,6 +28,7 @@ HEX_VALUE:
 .global _start
 _start:
 	MOV R0, #0
+	MOV R1, #0
 	
 	PUSH {LR}
 	BL HEX_write_ASM
@@ -53,8 +54,9 @@ LOOP:
 	@ write HEX
 	PUSH {LR}
 	BL HEX_write_ASM
+	
 	POP {LR}
-	ADD R0, #1
+	ADD R1, #1
 	
 	B LOOP
 
@@ -140,7 +142,7 @@ HEX_write_loop:
 @ R2: masked input
 @ R6: result register (result is value to HEX data register (segments info))
 write_segment_ASM:
-	PUSH {R4-R5}
+	PUSH {R4-R6}
 	MOV R4, #9
 	LDR R5, =HEX_VALUE
 	
@@ -155,7 +157,7 @@ segment_loop:
 number_found:
 	lDR R6, [R5, R4]
 	
-	POP {R4-R5}
+	POP {R4-R6}
 	BX LR
 
 	
