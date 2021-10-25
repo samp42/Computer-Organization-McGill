@@ -35,8 +35,8 @@ HEX_VALUE:
 
 .global _start
 _start:
-	MOV R0, #0
-	MOV R1, #0
+	MOV R0, #1
+	MOV R1, #1
 	
 	PUSH {LR}
 	BL HEX_write_ASM
@@ -108,13 +108,13 @@ HEX_flood_ASM:
 	
 flood_loop:
 	CMP R4, R5
-	BLT skip_store
+	BLT skip_flood_store
 	
 	SUB R4, R5
 	SUB R7, R8
 	STRB R6, [R7]
 	
-skip_store:
+skip_flood_store:
 	LSR R5, #1 @ divide by 2
 	ADD R8, #1 @ i++
 	BGE flood_loop
@@ -135,59 +135,23 @@ HEX_write_ASM:
 	BL HEX_flood_ASM
 	POP {R0-R1, LR}
 	
-	PUSH {R0, R4-R7}	
-	@ for every digit, load proper value in HEX0_MEMORY
-	LDR R6, =HEX0_MEMORY
-	MOV R4, #0xFF
-	@ rotate value
-	MOV R5, #-8
-	@ loop counter
-	MOV R7, #4
-	
-HEX_write_loop:
-	@ rotate input
-	ROR R0, R0, R5
-	@ apply mask
-	AND R2, R0, R4
-	
-	PUSH {LR}
-	BL write_segment_ASM
-	POP {LR}
-	
-	@ i--
-	SUBS R7, #1
-	BGT HEX_write_loop
-	@ loop ended
-	
-	POP {R0, R4-R7}
-	BX LR
-	
-
-@ inner subroutine for HEX_write_ASM
-@ loops through every digit 0..<9 to determine what number to output
-@ moves the result in R6 and shifts the mask and the result
-@ R2: masked input
-@ R6: result register (result is value to HEX data register (segments info))
-write_segment_ASM:
 	PUSH {R4-R6}
-	MOV R4, #9
+	LDR R4, =HEX0_MEMORY
+	
+	@ number to store in HEX memory
 	LDR R5, =HEX_VALUE
+	ADD R5, R1
+	LDR R5, [R5]
+	MOV R6, #2
+	MUL R0, R6
+	LSL R5, R0, #2
 	
-segment_loop:
-	CMP R2, R4
-	@ if equal, we have found the number, load it
-	BEQ number_found
-	@ j--
-	SUBS R4, #1
-	BGE segment_loop
-	
-number_found:
-	lDR R6, [R5, R4]
+	STR R5, [R4]
 	
 	POP {R4-R6}
+	
 	BX LR
 
-	
 @ returns indices of pressed push buttons
 read_PB_data_ASM:
 
