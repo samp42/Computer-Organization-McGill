@@ -11,11 +11,19 @@
 .equ HEX0_MEMORY, 0xFF200020
 .equ HEX4_MEMORY, 0xFF200030
 
+// display index encoding
+.equ HEX0, 0x00000001
+.equ HEX1, 0x00000002
+.equ HEX2, 0x00000004
+.equ HEX3, 0x00000008
+.equ HEX4, 0x00000010
+.equ HEX5, 0x00000020
+
 .equ HEX_ON, 0x0000007f
 .equ HEX_OFF, 0x0000000
 
 HEX_VALUE:
-.word 0x0000003f, 0x00000006, 0x0000005b, 0x0000004f, 0x00000066, 0x0000006d, 0x0000007d, 0x00000007, 0x0000007f, 0x0000006f
+.word 0x0000003f, 0x00000006, 0x0000005b, 0x0000004f, 0x00000066, 0x0000006d, 0x0000007d, 0x00000007, 0x0000007f, 0x0000006f, 0x00000077, 0x0000007c, 0x00000039, 0x0000005e, 0x00000079, 0x00000071
 
 // push buttons
 .equ PB0, 0x00000001
@@ -34,10 +42,6 @@ _start:
 	BL HEX_write_ASM
 	POP {LR}
 	
-	B LOOP
-	
-	B END
-
 LOOP:
 	@ endless loop
 	
@@ -92,23 +96,46 @@ HEX_clear_ASM:
 	BX LR
 
 @ turn ON all segments of HEX displays passed as argument
-@ argument: sum of indices of HEX displays in R0
+@ R0: sum of indices of HEX displays
 HEX_flood_ASM:
-
+	PUSH {R4-R9}
+	MOV R4, R0
+	LDR R5, =HEX5
+	LDR R6, =HEX_ON
+	LDR R7, =HEX4_MEMORY
+	ADD R7, #1
+	MOV R8, #0 @ loop counter
+	
+flood_loop:
+	CMP R4, R5
+	BLT skip_store
+	
+	SUB R4, R5
+	SUB R7, R8
+	STRB R6, [R7]
+	
+skip_store:
+	LSR R5, #1 @ divide by 2
+	ADD R8, #1 @ i++
+	BGE flood_loop
+	
+	POP {R4-R9}
+	BX LR
 
 @ writes hexadecimal digit received as argument in HEX display at given index
-@ argument: index of HEX display in R0
-@ argument: value to display in R1
+@ R0: index of HEX display
+@ R1: value to display
 HEX_write_ASM:
 	@ flood HEX4, HEX5
-	PUSH {R0, R4-R7}
-	LDR R4, =HEX4_MEMORY
-	LDR R5, =HEX_ON
-	MOV R6, R5
-	LSL R5, #8
-	ADD R5, R6
-	STR R5, [R4]
+	PUSH {R0-R1, LR}
+	LDR R0, =HEX4
+	LDR R1, =HEX5
+	ADD R0, R1
+
+	BL HEX_flood_ASM
+	POP {R0-R1, LR}
 	
+	PUSH {R0, R4-R7}	
 	@ for every digit, load proper value in HEX0_MEMORY
 	LDR R6, =HEX0_MEMORY
 	MOV R4, #0xFF
@@ -183,6 +210,4 @@ enable_PB_INT_ASM:
 disable_PB_INT_ASM:
 
 
-
-END:
-	.end
+.end
