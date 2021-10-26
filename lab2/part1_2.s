@@ -26,6 +26,10 @@ HEX_VALUE:
 .word 0x0000003f, 0x00000006, 0x0000005b, 0x0000004f, 0x00000066, 0x0000006d, 0x0000007d, 0x00000007, 0x0000007f, 0x0000006f, 0x00000077, 0x0000007c, 0x00000039, 0x0000005e, 0x00000079, 0x00000071
 
 // push buttons
+.equ PB_MEMORY, 0xff200050
+.equ PB_INT_MEMORY, 0xff200058
+.equ PB_EDGCAP_MEMORY, 0xff20005c
+
 .equ PB0, 0x00000001
 .equ PB1, 0x00000002
 .equ PB2, 0x00000004
@@ -36,7 +40,7 @@ HEX_VALUE:
 .global _start
 _start:
 	MOV R0, #2
-	MOV R1, #10
+	MOV R1, #12
 	
 	PUSH {LR}
 	BL HEX_write_ASM
@@ -45,24 +49,29 @@ _start:
 LOOP:
 	@ endless loop
 	
+	PUSH {LR}
+	BL read_PB_edgecp_ASM
+	POP {LR}
+	
 	@ read switches
 	PUSH {LR}
-	BL read_slider_switches_ASM
+	@BL read_slider_switches_ASM
 	POP {LR}
 	
 	@ write LEDs
 	PUSH {LR}
-	BL write_LEDs_ASM
+	@BL write_LEDs_ASM
 	POP {LR}
 	
 	@ write HEX
-	PUSH {LR}
-	BL HEX_write_ASM
+	@PUSH {LR}
+	@BL HEX_write_ASM
 	
-	POP {LR}
-	ADD R1, #1
+	@POP {LR}
+	@ADD R1, #1
 	
-	BL HEX_clear_ASM
+	@MOV R0, #63
+	@BL HEX_clear_ASM
 	B LOOP
 
 @ reads the value of the switches in stores it in R0
@@ -175,24 +184,61 @@ HEX_write_ASM:
 
 @ returns indices of pressed push buttons
 read_PB_data_ASM:
+	PUSH {R4}
+	LDR R4, =PB_MEMORY
+	LDR R0, [R4]
 	
+	POP {R4}
+	BX LR
 
-@ reads push buttons that have been pressed and released (falling edge)
+@ return indices of push buttons that have been pressed and released (falling edge)
 read_PB_edgecp_ASM:
-
+	PUSH {R4-R5, LR}
+	BL read_PB_data_ASM
+	MVN R4, R0
+	POP {LR}
+	
+	LDR R5, =PB_EDGCAP_MEMORY
+	LDR R5, [R5]
+	
+	AND R0, R4, R5
+	
+	POP {R4-R5}
+	BX LR
 
 @ clears the pushbuttons Edgecapture register
 PB_clear_edgecp_ASM:
+	PUSH {R4, LR}
+	BL read_PB_edgecp_ASM
+	
+	LDR R4, =PB_EDGCAP_MEMORY
+	STR R0, [R4]
+	
+	POP {R4, LR}
+	BX LR
 
-
-@ receives pushbuttons indices as an argument
-@ ??
+@ disables interrupt function (bit mask to 1)
+@ R0: indices of push buttons
 enable_PB_INT_ASM:
+	PUSH {R4}
+	LDR R4, =PB_INT_MEMORY
+	STR R0, [R4]
+	
+	POP {R4}
+	BX LR
 
-
-@ receives pushbuttons indices as an argument
-@ ??
+@ disables interrupt function (bit mask to 0)
+@ R0: indices of push buttons
 disable_PB_INT_ASM:
+	PUSH {R4}
+	LDR R4, =PB_INT_MEMORY
+	SUB R0, R4, R0 @ set corresponding bit to 0
+	STR R0, [R4]
+	
+	POP {R4}
+	BX LR
 
 
+END:
+	b END
 .end
