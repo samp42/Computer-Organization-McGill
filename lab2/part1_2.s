@@ -35,8 +35,8 @@ HEX_VALUE:
 
 .global _start
 _start:
-	MOV R0, #1
-	MOV R1, #1
+	MOV R0, #2
+	MOV R1, #10
 	
 	PUSH {LR}
 	BL HEX_write_ASM
@@ -62,6 +62,7 @@ LOOP:
 	POP {LR}
 	ADD R1, #1
 	
+	BL HEX_clear_ASM
 	B LOOP
 
 @ reads the value of the switches in stores it in R0
@@ -88,11 +89,30 @@ write_LEDs_ASM:
     BX LR
 	
 @ turn OFF all segments of HEX displays passed as argument
-@ argument: sum of indices of HEX displays in R0	
+@ R0: sum of indices of HEX displays
 HEX_clear_ASM:
-	PUSH {R1}
+	PUSH {R4-R9}
+	MOV R4, R0
+	LDR R5, =HEX5
+	LDR R6, =HEX_OFF
+	LDR R7, =HEX4_MEMORY
+	ADD R7, #1
+	MOV R8, #0 @ loop counter
 	
-	POP {R1}
+clear_loop:
+	CMP R4, R5
+	BLT skip_clear_store
+	
+	SUB R4, R5
+	SUB R7, R8
+	STRB R6, [R7]
+	
+skip_clear_store:
+	LSR R5, #1 @ divide by 2
+	ADD R8, #1 @ i++
+	BGE clear_loop
+	
+	POP {R4-R9}
 	BX LR
 
 @ turn ON all segments of HEX displays passed as argument
@@ -135,26 +155,27 @@ HEX_write_ASM:
 	BL HEX_flood_ASM
 	POP {R0-R1, LR}
 	
-	PUSH {R4-R6}
+	PUSH {R4-R7}
 	LDR R4, =HEX0_MEMORY
 	
 	@ number to store in HEX memory
 	LDR R5, =HEX_VALUE
-	ADD R5, R1
+	MOV R6, #4
+	MLA R5, R1, R6, R5 @ get to correct number
 	LDR R5, [R5]
-	MOV R6, #2
-	MUL R0, R6
-	LSL R5, R0, #2
+	MOV R7, #8
+	MUL R7, R0, R7
+	LSL R5, R7
 	
 	STR R5, [R4]
 	
-	POP {R4-R6}
+	POP {R4-R7}
 	
 	BX LR
 
 @ returns indices of pressed push buttons
 read_PB_data_ASM:
-
+	
 
 @ reads push buttons that have been pressed and released (falling edge)
 read_PB_edgecp_ASM:
