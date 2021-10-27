@@ -56,15 +56,16 @@ _start:
 
 	LDR R0, =HEX4_MEMORY
 	LDR R1, =HEX0_MEMORY
-	MOV R2, #0x0000007f
+	LDR R2, =0x07070707
 	
-	STR R2, [R0]
-	STR R2, [R1]
+	@STR R2, [R0]
+	@STR R2, [R1]
 	
 	PUSH {LR}
-	MOV R0, #0x11
-	BL HEX_clear_ASM
+	MOV R0, #0x18
+	BL HEX_flood_ASM
 	POP {LR}
+	B END
 	
 LOOP:
 	@ endless loop
@@ -136,14 +137,16 @@ HEX_clear_ASM:
 	LDR R5, =HEX5
 	LDR R6, =HEX4_MEMORY
 	MOV R7, #0 @ loop counter
-	MOV R8, #0x00001100
+	MOV R8, #0xffff00ff
 	
 clear_loop:
 	CMP R3, R5
 	BLT skip_clear_store
+	MRS R11, APSR
 	
 	SUB R3, R5
-	AND R9, R6, R8
+	LDR R9, [R6]
+	AND R9, R8
 	MVN R10, R8
 	AND R10, R4
 	ORR R10, R9
@@ -156,38 +159,53 @@ skip_clear_store:
 	CMP R7, #2 @ after to iterations, we go into the HEX first register
 	LDREQ R6, =HEX0_MEMORY
 	ROR R8, #8 @ rotate mask a byte to the right
-	SUB R11, R3, R5
-	SUBS R11, #1
+	CMP R5, #1
+	BLT clear_return
+	@ saved CPSR state from first compare in clear_loop
+	MSR APSR, R11
 	BGE clear_loop
-	
+
+clear_return:
 	POP {R4-R11}
 	BX LR
 
 @ turn ON all segments of HEX displays passed as argument
 @ R0: sum of indices of HEX displays
 HEX_flood_ASM:
-	PUSH {R4-R8}
+	PUSH {R4-R11}
 	MOV R4, R0
 	LDR R5, =HEX5
-	LDR R6, =HEX_ON
-	LDR R7, =HEX4_MEMORY
-	ADD R7, #1
-	MOV R8, #0 @ loop counter
+	LDR R6, =HEX4_MEMORY
+	MOV R7, #0 @ loop counter
+	MOV R8, #0xffff00ff
 	
 flood_loop:
 	CMP R4, R5
 	BLT skip_flood_store
+	MRS R11, APSR
 	
-	SUB R4, R5
-	SUB R7, R8
-	STRB R6, [R7]
+	SUB R3, R5
+	LDR R9, [R6]
+	AND R9, R8
+	MVN R10, R8
+	ORR R10, R9
+	
+	STR R10, [R6]
 	
 skip_flood_store:
 	LSR R5, #1 @ divide by 2
-	ADD R8, #1 @ i++
+	ADD R7, #1 @ i++
+	CMP R7, #2 @ after to iterations, we go into the HEX first register
+	LDREQ R6, =HEX0_MEMORY
+	ROR R8, #8 @ rotate mask a byte to the right
+	CMP R5, #1
+	BLT flood_return
+	@ saved CPSR state from first compare in clear_loop
+	MSR APSR, R11
 	BGE flood_loop
 	
-	POP {R4-R8}
+flood_return:
+	POP {R4-R11}
 	BX LR
 
 @ writes hexadecimal digit received as argument in HEX display at given index
