@@ -54,32 +54,21 @@ HEXF_VAL: .word 0x00000071
 .global _start
 _start:
 
-	LDR R0, =HEX4_MEMORY
-	LDR R1, =HEX0_MEMORY
-	LDR R2, =0x07070707
-	
-	@STR R2, [R0]
-	@STR R2, [R1]
-	
-	PUSH {LR}
-	MOV R0, #0x18
-	BL HEX_flood_ASM
-	POP {LR}
-	B END
+	@ setup
 	
 LOOP:
 	@ endless loop
 	
 	@ read switches
-	@ returns switches in R0
+	@ R0:switches value
 	PUSH {LR}
 	BL read_slider_switches_ASM
-	MOV R1, R0
 	MOV R4, R0
-	
+	TST R4, #0x200
 	POP {LR}
 	
 	@ write LEDs
+	@ write only if !SW9
 	PUSH {LR}
 	BL write_LEDs_ASM
 	POP {LR}
@@ -92,18 +81,17 @@ LOOP:
 	
 	@ if falling edge at PB0, write HEX
 	BEQ no_write
-	PUSH {LR}
 	@ R0: index
 	@ R1: value
+	PUSH {LR}
 	BL HEX_write_ASM
 	POP {LR}
 
 no_write:
 	
 	@ SW9 == 1 ? clear HEX
-	TST R4, #0x200
-	PUSHGT {LR}
 	MOVGT R0, R4
+	PUSHGT {LR}
 	BLGT HEX_clear_ASM
 	POPGT {LR}
 	
@@ -131,8 +119,8 @@ write_LEDs_ASM:
 @ turn OFF all segments of HEX displays passed as argument
 @ R0: sum of indices of HEX displays
 HEX_clear_ASM:
-	PUSH {R4-R11}
-	MOV R3, R0
+	PUSH {R4-R12}
+	MOV R12, R0
 	LDR R4, =HEX_OFF
 	LDR R5, =HEX5
 	LDR R6, =HEX4_MEMORY
@@ -140,11 +128,12 @@ HEX_clear_ASM:
 	MOV R8, #0xffff00ff
 	
 clear_loop:
-	CMP R3, R5
+	CMP R12, R5
 	BLT skip_clear_store
+	@ save CPSR state for later
 	MRS R11, APSR
 	
-	SUB R3, R5
+	SUB R12, R5
 	LDR R9, [R6]
 	AND R9, R8
 	MVN R10, R8
@@ -166,7 +155,7 @@ skip_clear_store:
 	BGE clear_loop
 
 clear_return:
-	POP {R4-R11}
+	POP {R4-R12}
 	BX LR
 
 @ turn ON all segments of HEX displays passed as argument
@@ -182,6 +171,7 @@ HEX_flood_ASM:
 flood_loop:
 	CMP R4, R5
 	BLT skip_flood_store
+	@ save CPSR state for later
 	MRS R11, APSR
 	
 	SUB R3, R5
