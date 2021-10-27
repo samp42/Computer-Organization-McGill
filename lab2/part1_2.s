@@ -69,9 +69,9 @@ LOOP:
 	
 	@ write LEDs
 	@ write only if !SW9
-	PUSH {LR}
-	BL write_LEDs_ASM
-	POP {LR}
+	PUSHNE {LR}
+	BLNE write_LEDs_ASM
+	POPNE {LR}
 	
 	@ check for falling edge
 	PUSH {LR}
@@ -202,15 +202,6 @@ flood_return:
 @ R0: index of HEX display
 @ R1: value to display
 HEX_write_ASM:
-	@ flood HEX4, HEX5
-	@PUSH {R0-R1, LR}
-	@LDR R0, =HEX4
-	@LDR R1, =HEX5
-	@ADD R0, R1
-
-	@BL HEX_flood_ASM
-	@POP {R0-R1, LR}
-	
 	PUSH {R4-R7}
 	LDR R4, =HEX0_MEMORY
 	
