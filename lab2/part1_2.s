@@ -19,9 +19,6 @@
 .equ HEX4, 0x00000010
 .equ HEX5, 0x00000020
 
-.equ HEX_ON, 0x0000007f
-.equ HEX_OFF, 0x0000000
-
 HEX0_VAL: .word 0x0000003f
 HEX1_VAL: .word 0x00000006
 HEX2_VAL: .word 0x0000005b
@@ -55,47 +52,64 @@ HEXF_VAL: .word 0x00000071
 _start:
 
 	@ setup
+	@ flood HEX4 and HEX5
+	LDR R0, =HEX4
+	LDR R1, =HEX5
+	ADD R0, R1
+	BL HEX_flood_ASM
 	
 LOOP:
 	@ endless loop
 	
 	@ read switches
 	@ R0:switches value
-	PUSH {LR}
 	BL read_slider_switches_ASM
 	MOV R4, R0
-	TST R4, #0x200
-	POP {LR}
 	
 	@ write LEDs
-	@ write only if !SW9
-	PUSHNE {LR}
-	BLNE write_LEDs_ASM
-	POPNE {LR}
+	BL write_LEDs_ASM
 	
 	@ check for falling edge
-	PUSH {LR}
 	BL read_PB_edgecp_ASM
-	ANDS R0, #1 @ mask for PB0
-	POP {LR}
+	MOV R5, R0
 	
-	@ if falling edge at PB0, write HEX
-	BEQ no_write
+	@ test if SW9==1
+	@ if SW9==1, clear (not equal, then skip)
+	TEQ R4, #0x00000200
+	BNE skip_clear
+	
+	@ clear last 4 displays
+	MOV R0, #0xf
+	BL HEX_clear_ASM
+	B goto_loop
+	
+skip_clear:
+	@ check if need to write to HEX
+	
+	@ if falling edge, write to corresponding HEX display
+	MOV R0, R5
+	TEQ R0, #0x0
+	@ if no falling edge, don't write
+	BEQ goto_loop
+	
 	@ R0: index
 	@ R1: value
 	PUSH {LR}
+	@ R0: result of read_PB_edgecp_ASM
+	MOV R1, R4
+	@ only care about last 4 bits
+	AND R1, #0xf
 	BL HEX_write_ASM
 	POP {LR}
-
-no_write:
 	
-	@ SW9 == 1 ? clear HEX
-	MOVGT R0, R4
-	PUSHGT {LR}
-	BLGT HEX_clear_ASM
-	POPGT {LR}
-	
+goto_loop:
 	B LOOP
+
+// -------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
+
 
 @ reads the value of the switches in stores
 @ return: R0
@@ -120,7 +134,7 @@ write_LEDs_ASM:
 @ R0: sum of indices of HEX displays
 HEX_clear_ASM:
 	PUSH {LR}
-	MOV R1, #0
+	MOV R1, #0x00
 	BL HEX_write_ASM
 	POP {LR}
 	BX LR
@@ -129,7 +143,7 @@ HEX_clear_ASM:
 @ R0: sum of indices of HEX displays
 HEX_flood_ASM:
 	PUSH {LR}
-	MOV R1, #0xff
+	MOV R1, #0x8
 	BL HEX_write_ASM
 	POP {LR}
 	BX LR
