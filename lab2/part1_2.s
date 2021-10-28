@@ -52,11 +52,6 @@ HEXF_VAL: .word 0x00000071
 _start:
 
 	@ setup
-	@ flood HEX4 and HEX5
-	LDR R0, =HEX4
-	LDR R1, =HEX5
-	ADD R0, R1
-	BL HEX_flood_ASM
 	
 LOOP:
 	@ endless loop
@@ -73,13 +68,16 @@ LOOP:
 	BL read_PB_edgecp_ASM
 	MOV R5, R0
 	
+	@ clear edge capt. register
+	BL PB_clear_edgecp_ASM
+	
 	@ test if SW9==1
 	@ if SW9==1, clear (not equal, then skip)
-	TEQ R4, #0x00000200
-	BNE skip_clear
+	CMP R4, #0x200
+	BLT skip_clear
 	
-	@ clear last 4 displays
-	MOV R0, #0xf
+	@ clear all displays
+	MOV R0, #0x3f
 	BL HEX_clear_ASM
 	B goto_loop
 	
@@ -92,15 +90,20 @@ skip_clear:
 	@ if no falling edge, don't write
 	BEQ goto_loop
 	
+	@ flood HEX4 and HEX5
+	LDR R0, =HEX4
+	LDR R1, =HEX5
+	ADD R0, R1
+	BL HEX_flood_ASM
+	
 	@ R0: index
 	@ R1: value
-	PUSH {LR}
 	@ R0: result of read_PB_edgecp_ASM
+	MOV R0, R5
 	MOV R1, R4
 	@ only care about last 4 bits
 	AND R1, #0xf
 	BL HEX_write_ASM
-	POP {LR}
 	
 goto_loop:
 	B LOOP
@@ -133,10 +136,44 @@ write_LEDs_ASM:
 @ turn OFF all segments of HEX displays passed as argument
 @ R0: sum of indices of HEX displays
 HEX_clear_ASM:
-	PUSH {LR}
-	MOV R1, #0x00
-	BL HEX_write_ASM
-	POP {LR}
+	PUSH {R4-R11}
+	MOV R4, R0
+	LDR R5, =HEX5
+	LDR R6, =HEX4_MEMORY
+	MOV R7, #0 @ loop counter
+	MOV R8, #0xffff00ff
+	MOV R2, #4
+	
+clear_loop:
+	CMP R4, R5
+	BLT skip_clear_store
+	@ save CPSR state for later
+	MRS R11, APSR
+	MOV R3, #0
+	SUB R4, R5
+	LDR R9, [R6]
+	AND R9, R8
+	MVN R10, R8
+	AND R10, R3
+	ORR R10, R9
+	
+	STR R10, [R6]
+	
+skip_clear_store:
+	LSR R5, #1 @ divide by 2
+	ADD R7, #1 @ i++
+	CMP R7, #2 @ after 2 iterations, we go to HEX0 register
+	LDREQ R6, =HEX0_MEMORY
+	ROR R8, #8 @ rotate mask a byte to the right
+	ROR R3, #8 @ rotate value to display
+	CMP R5, #1
+	BLT clear_return
+	@ saved CPSR state from first compare in clear_loop
+	MSR APSR, R11
+	BGE clear_loop
+	
+clear_return:
+	POP {R4-R11}
 	BX LR
 
 @ turn ON all segments of HEX displays passed as argument
@@ -148,6 +185,11 @@ HEX_flood_ASM:
 	POP {LR}
 	BX LR
 
+
+@ writes value passed as argument to all the given displays
+@ calculates the value to pass to the register based on the hexadecimal passed as input
+@ R0: sum of indices of HEX displays
+@ R1: hexadecimal value to display
 HEX_write_ASM:
 	PUSH {R4-R11}
 	MOV R4, R0
@@ -209,8 +251,8 @@ read_PB_edgecp_ASM:
 	PUSH {R4-R5}
 	PUSH {LR}
 	BL read_PB_data_ASM
-	MVN R4, R0
 	POP {LR}
+	MVN R4, R0
 	
 	LDR R5, =PB_EDGCAP_MEMORY
 	LDR R5, [R5]
@@ -218,6 +260,7 @@ read_PB_edgecp_ASM:
 	AND R0, R4, R5
 	
 	POP {R4-R5}
+	
 	BX LR
 
 @ clears the pushbuttons Edgecapture register
