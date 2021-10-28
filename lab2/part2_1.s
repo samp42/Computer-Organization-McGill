@@ -8,26 +8,37 @@
 
 .equ LOAD_VALUE, 0x0000000f
 
+// LEDs
+.equ LED_MEMORY, 0xFF200000
+
 // HEX
 .equ HEX0_MEMORY, 0xFF200020
 .equ HEX4_MEMORY, 0xFF200030
 
-.equ HEX_ON, 0x0000007f
-.equ HEX_OFF, 0x0000000
+// display index encoding
+.equ HEX0, 0x00000001
+.equ HEX1, 0x00000002
+.equ HEX2, 0x00000004
+.equ HEX3, 0x00000008
+.equ HEX4, 0x00000010
+.equ HEX5, 0x00000020
 
-// LED
-.equ LED_MEMORY, 0xFF200000
-
-.equ HEX0, 0x0000003f
-.equ HEX1, 0x00000006
-.equ HEX2, 0x0000005b
-.equ HEX3, 0x0000004f
-.equ HEX4, 0x00000066
-.equ HEX5, 0x0000006d
-.equ HEX6, 0x0000007d
-.equ HEX7, 0x00000007
-.equ HEX8, 0x0000007f
-.equ HEX9, 0x0000006f
+HEX0_VAL: .word 0x0000003f
+HEX1_VAL: .word 0x00000006
+HEX2_VAL: .word 0x0000005b
+HEX3_VAL: .word 0x0000004f
+HEX4_VAL: .word 0x00000066
+HEX5_VAL: .word 0x0000006d
+HEX6_VAL: .word 0x0000007d
+HEX7_VAL: .word 0x00000007
+HEX8_VAL: .word 0x0000007f
+HEX9_VAL: .word 0x0000006f
+HEXA_VAL: .word 0x00000077
+HEXB_VAL: .word 0x0000007c
+HEXC_VAL: .word 0x00000039
+HEXD_VAL: .word 0x0000005e
+HEXE_VAL: .word 0x00000079
+HEXF_VAL: .word 0x00000071
 
 .text
 .global _start
@@ -105,9 +116,106 @@ ARM_TIM_clear_INT_ASM:
 	POP {R4, R5}
 	BX LR
 
-@ writes time on HEX displays
-HEX_write_ASM:
+@ turn OFF all segments of HEX displays passed as argument
+@ R0: sum of indices of HEX displays
+HEX_clear_ASM:
+	PUSH {R4-R11}
+	MOV R4, R0
+	LDR R5, =HEX5
+	LDR R6, =HEX4_MEMORY
+	MOV R7, #0 @ loop counter
+	MOV R8, #0xffff00ff
+	MOV R2, #4
 	
+clear_loop:
+	CMP R4, R5
+	BLT skip_clear_store
+	@ save CPSR state for later
+	MRS R11, APSR
+	MOV R3, #0
+	SUB R4, R5
+	LDR R9, [R6]
+	AND R9, R8
+	MVN R10, R8
+	AND R10, R3
+	ORR R10, R9
+	
+	STR R10, [R6]
+	
+skip_clear_store:
+	LSR R5, #1 @ divide by 2
+	ADD R7, #1 @ i++
+	CMP R7, #2 @ after 2 iterations, we go to HEX0 register
+	LDREQ R6, =HEX0_MEMORY
+	ROR R8, #8 @ rotate mask a byte to the right
+	ROR R3, #8 @ rotate value to display
+	CMP R5, #1
+	BLT clear_return
+	@ saved CPSR state from first compare in clear_loop
+	MSR APSR, R11
+	BGE clear_loop
+	
+clear_return:
+	POP {R4-R11}
+	BX LR
+
+@ turn ON all segments of HEX displays passed as argument
+@ R0: sum of indices of HEX displays
+HEX_flood_ASM:
+	PUSH {LR}
+	MOV R1, #0x8
+	BL HEX_write_ASM
+	POP {LR}
+	BX LR
+
+
+@ writes value passed as argument to all the given displays
+@ calculates the value to pass to the register based on the hexadecimal passed as input
+@ R0: sum of indices of HEX displays
+@ R1: hexadecimal value to display
+HEX_write_ASM:
+	PUSH {R4-R11}
+	MOV R4, R0
+	LDR R5, =HEX5
+	LDR R6, =HEX4_MEMORY
+	MOV R7, #0 @ loop counter
+	MOV R8, #0xffff00ff
+	MOV R2, #4
+	LDR R3, =HEX0_VAL
+	MLA R3, R1, R2, R3
+	LDR R3, [R3]
+	ROR R3, #24 @ rotate display value left 1 byte
+	
+write_loop:
+	CMP R4, R5
+	BLT skip_write_store
+	@ save CPSR state for later
+	MRS R11, APSR
+	
+	SUB R4, R5
+	LDR R9, [R6]
+	AND R9, R8
+	MVN R10, R8
+	AND R10, R3
+	ORR R10, R9
+	
+	STR R10, [R6]
+	
+skip_write_store:
+	LSR R5, #1 @ divide by 2
+	ADD R7, #1 @ i++
+	CMP R7, #2 @ after 2 iterations, we go to HEX0 register
+	LDREQ R6, =HEX0_MEMORY
+	ROR R8, #8 @ rotate mask a byte to the right
+	ROR R3, #8 @ rotate value to display
+	CMP R5, #1
+	BLT write_return
+	@ saved CPSR state from first compare in clear_loop
+	MSR APSR, R11
+	BGE write_loop
+	
+write_return:
+	POP {R4-R11}
 	BX LR
 
 @ R0: number
