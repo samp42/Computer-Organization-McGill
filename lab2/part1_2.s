@@ -119,105 +119,64 @@ write_LEDs_ASM:
 @ turn OFF all segments of HEX displays passed as argument
 @ R0: sum of indices of HEX displays
 HEX_clear_ASM:
-	PUSH {R4-R12}
-	MOV R12, R0
-	LDR R4, =HEX_OFF
-	LDR R5, =HEX5
-	LDR R6, =HEX4_MEMORY
-	MOV R7, #0 @ loop counter
-	MOV R8, #0xffff00ff
-	
-clear_loop:
-	CMP R12, R5
-	BLT skip_clear_store
-	@ save CPSR state for later
-	MRS R11, APSR
-	
-	SUB R12, R5
-	LDR R9, [R6]
-	AND R9, R8
-	MVN R10, R8
-	AND R10, R4
-	ORR R10, R9
-	
-	STR R10, [R6]
-	
-skip_clear_store:
-	LSR R5, #1 @ divide by 2
-	ADD R7, #1 @ i++
-	CMP R7, #2 @ after to iterations, we go into the HEX first register
-	LDREQ R6, =HEX0_MEMORY
-	ROR R8, #8 @ rotate mask a byte to the right
-	CMP R5, #1
-	BLT clear_return
-	@ saved CPSR state from first compare in clear_loop
-	MSR APSR, R11
-	BGE clear_loop
-
-clear_return:
-	POP {R4-R12}
+	PUSH {LR}
+	MOV R1, #0
+	BL HEX_write_ASM
+	POP {LR}
 	BX LR
 
 @ turn ON all segments of HEX displays passed as argument
 @ R0: sum of indices of HEX displays
 HEX_flood_ASM:
+	PUSH {LR}
+	MOV R1, #0xff
+	BL HEX_write_ASM
+	POP {LR}
+	BX LR
+
+HEX_write_ASM:
 	PUSH {R4-R11}
 	MOV R4, R0
 	LDR R5, =HEX5
 	LDR R6, =HEX4_MEMORY
 	MOV R7, #0 @ loop counter
 	MOV R8, #0xffff00ff
+	MOV R2, #4
+	LDR R3, =HEX0_VAL
+	MLA R3, R1, R2, R3
+	LDR R3, [R3]
+	ROR R3, #24 @ rotate display value left 1 byte
 	
-flood_loop:
+write_loop:
 	CMP R4, R5
-	BLT skip_flood_store
+	BLT skip_write_store
 	@ save CPSR state for later
 	MRS R11, APSR
 	
-	SUB R3, R5
+	SUB R4, R5
 	LDR R9, [R6]
 	AND R9, R8
 	MVN R10, R8
+	AND R10, R3
 	ORR R10, R9
 	
 	STR R10, [R6]
 	
-skip_flood_store:
+skip_write_store:
 	LSR R5, #1 @ divide by 2
 	ADD R7, #1 @ i++
-	CMP R7, #2 @ after to iterations, we go into the HEX first register
+	CMP R7, #2 @ after 2 iterations, we go to HEX0 register
 	LDREQ R6, =HEX0_MEMORY
 	ROR R8, #8 @ rotate mask a byte to the right
+	ROR R3, #8 @ rotate value to display
 	CMP R5, #1
-	BLT flood_return
+	BLT write_return
 	@ saved CPSR state from first compare in clear_loop
 	MSR APSR, R11
-	BGE flood_loop
+	BGE write_loop
 	
-flood_return:
+write_return:
 	POP {R4-R11}
-	BX LR
-
-@ writes hexadecimal digit received as argument in HEX display at given index
-@ R0: index of HEX display
-@ R1: value to display
-HEX_write_ASM:
-	PUSH {R4-R7}
-	LDR R4, =HEX0_MEMORY
-	
-	@ number to store in HEX memory
-	LDR R5, =HEX0_VAL
-	MOV R6, #4
-	MLA R5, R1, R6, R5 @ get to correct number
-	LDR R5, [R5]
-	MOV R7, #8
-	MUL R7, R0, R7
-	LSL R5, R7
-	
-	STR R5, [R4]
-	
-	POP {R4-R7}
-	
 	BX LR
 
 @ returns indices of pressed push buttons
