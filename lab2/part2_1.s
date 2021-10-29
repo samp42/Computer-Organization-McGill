@@ -4,10 +4,10 @@
 .equ COUNTER_MEMORY, 0xfffec604
 .equ CONTROL_MEMORY, 0xfffec608
 .equ ISR_MEMORY, 0xfffec60c
-.equ PRESCALER_VALUE, 0xff @ 0x4 ?????
+.equ PRESCALER_VALUE, 0xff // 0x4 ?????
 
 .equ LOAD_VALUE, 0x0000000f
-.equ I_VALUE, 0x1
+.equ I_VALUE, 0x0 // should it be 0 or 1 ??
 .equ A_VALUE, 0x1
 .equ E_VALUE, 0x1
 
@@ -75,6 +75,11 @@ _start:
 	POP {LR}
 	
 LOOP:
+
+	// TODO: TRY TO STOP COUNTER EVERYTIME F IS 1
+	// IMPLIES SETTING A TO 0 AND E TO 0
+	// SET E TO 0 EVERY TIME IT STOPS AND SET IT BACK TO 1 WHEN READY TO START AGAIN
+
 	BL ARM_TIM_read_INT_ASM
 	@ check if F bit is 1
 	TEQ R0, #0x1
