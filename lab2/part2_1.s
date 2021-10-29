@@ -6,7 +6,7 @@
 .equ ISR_MEMORY, 0xfffec60c
 .equ PRESCALER_VALUE, 0x4
 
-.equ LOAD_VALUE, 0x0000000f
+.equ LOAD_VALUE, 0x00000010
 
 // LEDs
 .equ LED_MEMORY, 0xff200000
@@ -47,22 +47,24 @@ _start:
 	@ count value
 	MOV R4, #0
 	
+	@ load register
+	LDR R0, =LOAD_VALUE
+	
 	@ control register
-	LDR R0, =PRESCALER_VALUE
+	LDR R1, =PRESCALER_VALUE
+	@ prescaler
+	LSL R1, #8
 	@ I bit
 	MOV R5, #1
 	LSL R5, #2
 	@ A bit
 	MOV R6, #1
 	LSL R6, #1
-	ADD R5, R6
+	ORR R5, R6
 	@ E bit
-	ADD R5, #1
-	@ prescaler
-	@ TODO: shift prescaler
-	MOV R6, #PRESCALER_VALUE
-	LSL R6, #8
-	ADD R1, R5, R6
+	ORR R5, #1
+
+	ORR R1, R5
 	
 	PUSH {LR}
 	BL ARM_TIM_config_ASM
