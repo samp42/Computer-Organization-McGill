@@ -4,12 +4,12 @@
 .equ COUNTER_MEMORY, 0xfffec604
 .equ CONTROL_MEMORY, 0xfffec608
 .equ ISR_MEMORY, 0xfffec60c
-.equ PRESCALER_VALUE, 0x5f @ 0x4 ?????
+.equ PRESCALER_VALUE, 0xff @ 0x4 ?????
 
 .equ LOAD_VALUE, 0x0000000f
 .equ I_VALUE, 0x1
 .equ A_VALUE, 0x1
-.equ, E_VALUE, 0x1
+.equ E_VALUE, 0x1
 
 // LEDs
 .equ LED_MEMORY, 0xff200000
@@ -58,7 +58,7 @@ _start:
 	@ prescaler
 	LSL R1, #8
 	@ I bit
-	LDR R1, =I_VALUE
+	LDR R5, =I_VALUE
 	LSL R5, #2
 	@ A bit
 	LDR R6, =A_VALUE
@@ -77,7 +77,7 @@ _start:
 LOOP:
 	BL ARM_TIM_read_INT_ASM
 	@ check if F bit is 1
-	TST R0, #0x1
+	TEQ R0, #0x1
 	
 	BNE skip_increment
 	
