@@ -4,9 +4,9 @@
 .equ COUNTER_MEMORY, 0xfffec604
 .equ CONTROL_MEMORY, 0xfffec608
 .equ ISR_MEMORY, 0xfffec60c
-.equ PRESCALER_VALUE, 0x4
+.equ PRESCALER_VALUE, 0x5f @ 0x4 ?????
 
-.equ LOAD_VALUE, 0x00000010
+.equ LOAD_VALUE, 0x0000000f
 
 // LEDs
 .equ LED_MEMORY, 0xff200000
@@ -71,23 +71,35 @@ _start:
 	POP {LR}
 	
 LOOP:
-	PUSH {LR}
 	BL ARM_TIM_read_INT_ASM
-	CMP R0, #0xf
+	@ check if F bit is 1
+	TST R0, #0x1
 	
-	@ if f == 1, increment count value
-	ADDGE R4, #1
-	POP {LR}
+	BNE skip_increment
+	
+	@ if F == 1
+	@ reset F bit
+	
+	BL ARM_TIM_clear_INT_ASM
+	
+	@ increment count value
+	ADD R4, #1
+	MOV R0, R4
+	
+	@ write count value to LED3-LED0 and HEX0
+	
+	BL LED_write_ASM
+	
+	@ HEX_write_ASM has different arguments
+	MOV R1, R0
+	MOV R0, #0x1
+	BL HEX_write_ASM
 	
 	CMP R4, #0xf
-	
 	@ reset count value when 15
-	MOV R4, #0
-	MOV R0, R4
-	PUSH {LR}
-	BL LED_write_ASM
-	POP {LR}
+	MOVGE R4, #0
 	
+skip_increment:
 	B LOOP
 	
 @ R0: Load value
