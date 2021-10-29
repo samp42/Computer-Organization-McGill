@@ -7,6 +7,9 @@
 .equ PRESCALER_VALUE, 0x5f @ 0x4 ?????
 
 .equ LOAD_VALUE, 0x0000000f
+.equ I_VALUE, 0x1
+.equ A_VALUE, 0x1
+.equ, E_VALUE, 0x1
 
 // LEDs
 .equ LED_MEMORY, 0xff200000
@@ -55,14 +58,15 @@ _start:
 	@ prescaler
 	LSL R1, #8
 	@ I bit
-	MOV R5, #1
+	LDR R1, =I_VALUE
 	LSL R5, #2
 	@ A bit
-	MOV R6, #1
+	LDR R6, =A_VALUE
 	LSL R6, #1
 	ORR R5, R6
 	@ E bit
-	ORR R5, #1
+	LDR R6, =E_VALUE
+	ORR R5, R6
 
 	ORR R1, R5
 	
