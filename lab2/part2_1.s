@@ -4,12 +4,9 @@
 .equ COUNTER_MEMORY, 0xfffec604
 .equ CONTROL_MEMORY, 0xfffec608
 .equ ISR_MEMORY, 0xfffec60c
-.equ PRESCALER_VALUE, 0xff // 0x4 ?????
+.equ PRESCALER_VALUE, 0xff
 
-.equ LOAD_VALUE, 0x0000000f
-.equ I_VALUE, 0x0 // should it be 0 or 1 ??
-.equ A_VALUE, 0x1
-.equ E_VALUE, 0x1
+.equ LOAD_VALUE, 0x000dffff//0x0005f5e1
 
 // LEDs
 .equ LED_MEMORY, 0xff200000
@@ -58,14 +55,17 @@ _start:
 	@ prescaler
 	LSL R1, #8
 	@ I bit
-	LDR R5, =I_VALUE
+	@ interrupt required ???
+	MOV R5, #1
 	LSL R5, #2
 	@ A bit
-	LDR R6, =A_VALUE
+	@ automatic timer restart
+	MOV R6, #1
 	LSL R6, #1
 	ORR R5, R6
 	@ E bit
-	LDR R6, =E_VALUE
+	@ enable by default
+	MOV R6, #1
 	ORR R5, R6
 
 	ORR R1, R5
@@ -111,6 +111,10 @@ LOOP:
 skip_increment:
 	B LOOP
 	
+// -----------------------------------------------------------------
+// -----------------------------------------------------------------
+// -----------------------------------------------------------------
+
 @ R0: Load value
 @ R1: configuration bits in control register
 ARM_TIM_config_ASM:
@@ -124,11 +128,13 @@ ARM_TIM_config_ASM:
 	POP {R4}
 	BX LR
 
+
 @ get F bit
 ARM_TIM_read_INT_ASM:
 	LDR R0, =ISR_MEMORY
 	LDR R0, [R0]
 	BX LR
+
 
 @ clears F bit to 0
 ARM_TIM_clear_INT_ASM:
@@ -138,6 +144,7 @@ ARM_TIM_clear_INT_ASM:
 	STR R5, [R4]
 	POP {R4, R5}
 	BX LR
+
 
 @ turn OFF all segments of HEX displays passed as argument
 @ R0: sum of indices of HEX displays
@@ -180,15 +187,6 @@ skip_clear_store:
 	
 clear_return:
 	POP {R4-R11}
-	BX LR
-
-@ turn ON all segments of HEX displays passed as argument
-@ R0: sum of indices of HEX displays
-HEX_flood_ASM:
-	PUSH {LR}
-	MOV R1, #0x8
-	BL HEX_write_ASM
-	POP {LR}
 	BX LR
 
 
@@ -240,21 +238,7 @@ skip_write_store:
 write_return:
 	POP {R4-R11}
 	BX LR
-
-@ R0: number
-@ R1: position [0-5]
-@ will add that number to the current value set in the display register
-HEX_add_ASM:
-	@ if position is 4 or 5, add to HEX4_MEMORY
-	CMP R1, #4
-	SUBGE R1, #4
-	PUSH {V1}
-	MOV V1, #2
-	MUL R1, V1
-	POP {V1}
-	LSL R0, R1
 	
-	BX LR
 	
 @ R0: number
 LED_write_ASM:
