@@ -90,8 +90,6 @@ LOOP:
 	
 	BL ARM_TIM_clear_INT_ASM
 	
-	@ increment count value
-	ADD R4, #1
 	MOV R0, R4
 	
 	@ write count value to LED3-LED0 and HEX0
@@ -103,7 +101,10 @@ LOOP:
 	MOV R0, #0x1
 	BL HEX_write_ASM
 	
-	CMP R4, #0xf
+	@ increment count value
+	ADD R4, #1
+	
+	CMP R4, #0x10
 	@ reset count value when 15
 	MOVGE R4, #0
 	
