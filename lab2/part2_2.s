@@ -54,6 +54,11 @@ _start:
 	MOV R5, #0
 	@ min
 	MOV R6, #0
+	
+	@ constants
+	LDR R7, =MAX_MS
+	LDR R8, =MAX_S
+	LDR R9, =MAX_MIN
 
 	@ load register
 	LDR R0, =LOAD_VALUE
@@ -100,21 +105,26 @@ LOOP:
 	
 	MOV R0, R4
 	
-	@ write count value to LED3-LED0 and HEX0
-	
-	BL LED_write_ASM
+	@ divide into tens
+	BL base_conversion_ASM
+	MOV R2, R0
 	
 	@ HEX_write_ASM has different arguments
-	MOV R1, R0
 	MOV R0, #0x1
 	BL HEX_write_ASM
 	
-	@ increment count value
+	MOV R0, #0x2
+	MOV R1, R2
+	BL HEX_write_ASM
+	
+	@ increment ms
 	ADD R4, #1
 	
 	CMP R4, #0x10
-	@ reset count value when 15
+	@ reset ms when reaches MAX_MS and increment s
 	MOVGE R4, #0
+	ADDGE R5, #1
+
 	
 skip_increment:
 	B LOOP
@@ -246,15 +256,7 @@ skip_write_store:
 write_return:
 	POP {R4-R11}
 	BX LR
-	
-	
-@ R0: number
-LED_write_ASM:
-	PUSH {R4}
-	LDR R4, =LED_MEMORY
-	STR R0, [R4]
-	POP {R4}
-	BX LR
+
 	
 @ returns the decimal reprensentation of a number (tens and units)
 @ input R0: the number
@@ -268,7 +270,7 @@ add_tens_loop:
 	@ if >= 10 (0xa), then add to tens
 	CMP R0, #0xa
 	ADDGE R4, #1
-	SUBGE R0, 0xa
+	SUBGE R0, #0xa
 	BGE add_tens_loop
 	@ if < 10, this is the units
 	MOV R1, R0
