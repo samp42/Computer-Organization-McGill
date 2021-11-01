@@ -204,6 +204,7 @@ HEX_write_ASM:
 	ROR R3, #24 @ rotate display value left 1 byte
 	
 write_loop:
+	@ compare sum with current index
 	CMP R4, R5
 	BLT skip_write_store
 	@ save CPSR state for later
