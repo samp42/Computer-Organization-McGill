@@ -266,6 +266,7 @@ read_PB_edgecp_ASM:
 
 @ clears the pushbuttons Edgecapture register
 PB_clear_edgecp_ASM:
+	@ TODO: DON'T READ, WRITE 1 DIRECTLY
 	PUSH {R4, LR}
 	BL read_PB_edgecp_ASM
 	
