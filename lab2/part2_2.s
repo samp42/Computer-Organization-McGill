@@ -110,10 +110,39 @@ LOOP:
 	MOV R8, R0
 	
 	@ HEX_write_ASM has different arguments
+	@ MS
 	MOV R0, #0x1
 	BL HEX_write_ASM
 	
 	MOV R0, #0x2
+	MOV R1, R8
+	BL HEX_write_ASM
+	
+	@ S
+	MOV R0, R5
+	
+	@ divide into tens
+	BL base_conversion_ASM
+	MOV R8, R0
+	
+	MOV R0, #0x4
+	BL HEX_write_ASM
+	
+	MOV R0, #0x8
+	MOV R1, R8
+	BL HEX_write_ASM
+	
+	@ MIN
+	MOV R0, R6
+	
+	@ divide into tens
+	BL base_conversion_ASM
+	MOV R8, R0
+	
+	MOV R0, #0x10
+	BL HEX_write_ASM
+	
+	MOV R0, #0x20
 	MOV R1, R8
 	BL HEX_write_ASM
 	
@@ -126,6 +155,10 @@ LOOP:
 	MOVGE R4, #0
 	ADDGE R5, #1
 
+	LDR R3, =MAX_S
+	CMP R5, R3
+	MOVGE R5, #0
+	ADDGE R6, #1
 	
 skip_increment:
 	B LOOP
