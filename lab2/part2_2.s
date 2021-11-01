@@ -107,20 +107,21 @@ LOOP:
 	
 	@ divide into tens
 	BL base_conversion_ASM
-	MOV R2, R0
+	MOV R8, R0
 	
 	@ HEX_write_ASM has different arguments
 	MOV R0, #0x1
 	BL HEX_write_ASM
 	
 	MOV R0, #0x2
-	MOV R1, R2
+	MOV R1, R8
 	BL HEX_write_ASM
 	
 	@ increment ms
 	ADD R4, #1
 	
-	CMP R4, #0x10
+	LDR R3, =MAX_MS
+	CMP R4, R3
 	@ reset ms when reaches MAX_MS and increment s
 	MOVGE R4, #0
 	ADDGE R5, #1
