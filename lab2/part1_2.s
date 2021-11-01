@@ -275,7 +275,7 @@ PB_clear_edgecp_ASM:
 	POP {R4, LR}
 	BX LR
 
-@ disables interrupt function (bit mask to 1)
+@ enables interrupt function (bit mask to 1)
 @ R0: indices of push buttons
 enable_PB_INT_ASM:
 	PUSH {R4}
