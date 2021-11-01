@@ -54,6 +54,8 @@ HEXF_VAL: .word 0x00000071
 .equ PB2, 0x00000004
 .equ PB3, 0x00000008
 
+PB_int_flag : .word 0x0
+
 .section .vectors, "ax"
 B _start
 B SERVICE_UND       // undefined instruction vector
@@ -114,6 +116,8 @@ _start:
     MOV        R0, #0b01010011      // IRQ unmasked, MODE = SVC
     MSR        CPSR_c, R0
 IDLE:
+	
+
     B IDLE // This is where you write your objective task
 	
 /*--- Undefined instructions ---------------------------------------- */
@@ -140,7 +144,16 @@ SERVICE_IRQ:
    If the ID is not recognized, branch to UNEXPECTED
    See the assembly example provided in the De1-SoC Computer_Manual on page 46 */
  Pushbutton_check:
-    CMP R5, #73
+    @ pushbutton interrupt
+	CMP R5, #73
+	
+	@ timer interrupt
+	CMP R5, #29
+	//BL 
+	
+	@ unknown interrupt
+	BNE UNEXPECTED
+	
 UNEXPECTED:
     BNE UNEXPECTED      // if not recognized, stop here
     BL KEY_ISR
@@ -164,6 +177,13 @@ CONFIG_GIC:
     MOV R0, #73            // KEY port (Interrupt ID = 73)
     MOV R1, #1             // this field is a bit-mask; bit 0 targets cpu0
     BL CONFIG_INTERRUPT
+	
+	
+/* configure A9 private timer Interrupt */
+	MOV R0, #29            // private timer (Interrupt ID = 29)
+    MOV R1, #1             // this field is a bit-mask; bit 0 targets cpu0
+    BL CONFIG_INTERRUPT
+	
 
 /* configure the GIC CPU Interface */
     LDR R0, =0xFFFEC100    // base address of CPU Interface
