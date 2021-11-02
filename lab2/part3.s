@@ -179,13 +179,11 @@ CONFIG_GIC:
     MOV R0, #73            // KEY port (Interrupt ID = 73)
     MOV R1, #1             // this field is a bit-mask; bit 0 targets cpu0
     BL CONFIG_INTERRUPT
-	
-	
+
 /* configure A9 private timer Interrupt */
 	MOV R0, #29            // private timer (Interrupt ID = 29)
     MOV R1, #1             // this field is a bit-mask; bit 0 targets cpu0
-    BL CONFIG_INTERRUPT
-	
+    BL CONFIG_INTERRUPT	
 
 /* configure the GIC CPU Interface */
     LDR R0, =0xFFFEC100    // base address of CPU Interface
