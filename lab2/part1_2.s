@@ -239,11 +239,9 @@ write_return:
 @ returns indices of pressed push buttons
 @ return: R0
 read_PB_data_ASM:
-	PUSH {R4}
-	LDR R4, =PB_MEMORY
-	LDR R0, [R4]
+	LDR R0, =PB_MEMORY
+	LDR R0, [R0]
 	
-	POP {R4}
 	BX LR
 
 @ return indices of push buttons that have been pressed and released (falling edge)
