@@ -67,9 +67,11 @@ B SERVICE_ABT_DATA  // aborted data vector
 B SERVICE_IRQ       // IRQ interrupt vector
 B SERVICE_FIQ       // FIQ interrupt vector
 
+.text
 .global _start
+
 _start:
-	/* Set up stack pointers for IRQ and SVC processor modes */
+    /* Set up stack pointers for IRQ and SVC processor modes */
     MOV        R1, #0b11010010      // interrupts masked, MODE = IRQ
     MSR        CPSR_c, R1           // change to IRQ mode
     LDR        SP, =0xFFFFFFFF - 3  // set IRQ stack to A9 onchip memory
@@ -81,46 +83,86 @@ _start:
     // To DO: write to the pushbutton KEY interrupt mask register
     // Or, you can call enable_PB_INT_ASM subroutine from previous task
     // to enable interrupt for ARM A9 private timer, use ARM_TIM_config_ASM subroutine
-	
-	MOV R0, #0xf
-	BL enable_PB_INT_ASM
-	
-	@ load register
-	LDR R0, =LOAD_VALUE
-	
-	@ control register
-	LDR R1, =PRESCALER_VALUE
-	@ prescaler
-	LSL R1, #8
-	@ I bit
-	@ interrupt required
-	MOV R7, #1
-	LSL R7, #2
-	@ A bit
-	@ automatic timer restart
-	MOV R8, #1
-	LSL R8, #1
-	ORR R7, R8
-	@ E bit
-	@ enable by default
-	MOV R8, #1
-	ORR R7, R8
-
-	ORR R1, R7
-	
-	BL ARM_TIM_config_ASM
-	
     LDR        R0, =0xFF200050      // pushbutton KEY base address
     MOV        R1, #0xF             // set interrupt mask bits
     STR        R1, [R0, #0x8]       // interrupt mask register (base + 8)
     // enable IRQ interrupts in the processor
     MOV        R0, #0b01010011      // IRQ unmasked, MODE = SVC
     MSR        CPSR_c, R0
+	
 IDLE:
+	BL ARM_TIM_read_INT_ASM
+	@ check if F bit is 1
+	TEQ R0, #0x1
 	
+	BNE skip_increment
+	
+	@ if F == 1
+	@ reset F bit
+	
+	BL ARM_TIM_clear_INT_ASM
+	
+	MOV R0, R4
+	
+	@ divide into tens
+	BL base_conversion_ASM
+	MOV R8, R0
+	
+	@ HEX_write_ASM has different arguments
+	@ MS
+	MOV R0, #0x1
+	BL HEX_write_ASM
+	
+	MOV R0, #0x2
+	MOV R1, R8
+	BL HEX_write_ASM
+	
+	@ S
+	MOV R0, R5
+	
+	@ divide into tens
+	BL base_conversion_ASM
+	MOV R8, R0
+	
+	MOV R0, #0x4
+	BL HEX_write_ASM
+	
+	MOV R0, #0x8
+	MOV R1, R8
+	BL HEX_write_ASM
+	
+	@ MIN
+	MOV R0, R6
+	
+	@ divide into tens
+	BL base_conversion_ASM
+	MOV R8, R0
+	
+	MOV R0, #0x10
+	BL HEX_write_ASM
+	
+	MOV R0, #0x20
+	MOV R1, R8
+	BL HEX_write_ASM
+	
+	@ increment ms
+	ADD R4, #1
+	
+	LDR R3, =MAX_MS
+	CMP R4, R3
+	@ reset ms when reaches MAX_MS and increment s
+	MOVGE R4, #0
+	ADDGE R5, #1
 
-    B IDLE // This is where you write your objective task
+	LDR R3, =MAX_S
+	CMP R5, R3
+	MOVGE R5, #0
+	ADDGE R6, #1
 	
+skip_increment:
+    B IDLE // This is where you write your objective task
+
+
 /*--- Undefined instructions ---------------------------------------- */
 SERVICE_UND:
     B SERVICE_UND
@@ -145,17 +187,7 @@ SERVICE_IRQ:
    If the ID is not recognized, branch to UNEXPECTED
    See the assembly example provided in the De1-SoC Computer_Manual on page 46 */
  Pushbutton_check:
-    @ pushbutton interrupt
-	CMP R5, #73
-	BLEQ KEY_ISR
-	
-	@ timer interrupt
-	CMP R5, #29
-	BLEQ ARM_TIM_ISR
-	
-	@ unknown interrupt
-	BNE UNEXPECTED
-	
+    CMP R5, #73
 UNEXPECTED:
     BNE UNEXPECTED      // if not recognized, stop here
     BL KEY_ISR
@@ -167,7 +199,8 @@ SUBS PC, LR, #4
 /*--- FIQ ----------------------------------------------------------- */
 SERVICE_FIQ:
     B SERVICE_FIQ
-	
+
+
 CONFIG_GIC:
     PUSH {LR}
 /* To configure the FPGA KEYS interrupt (ID 73):
@@ -180,10 +213,10 @@ CONFIG_GIC:
     MOV R1, #1             // this field is a bit-mask; bit 0 targets cpu0
     BL CONFIG_INTERRUPT
 
-/* configure A9 private timer Interrupt */
-	MOV R0, #29            // private timer (Interrupt ID = 29)
+    // configure timer interrupt
+    MOV R0, #29            // KEY port (Interrupt ID = 29)
     MOV R1, #1             // this field is a bit-mask; bit 0 targets cpu0
-    BL CONFIG_INTERRUPT	
+    BL CONFIG_INTERRUPT
 
 /* configure the GIC CPU Interface */
     LDR R0, =0xFFFEC100    // base address of CPU Interface
@@ -199,7 +232,7 @@ CONFIG_GIC:
     LDR R0, =0xFFFED000
     STR R1, [R0]
     POP {PC}
-	
+
 /*
 * Configure registers in the GIC for an individual Interrupt ID
 * We configure only the Interrupt Set Enable Registers (ICDISERn) and
@@ -237,14 +270,14 @@ CONFIG_INTERRUPT:
 * (only) the appropriate byte */
     STRB R1, [R4]
     POP {R4-R5, PC}
-	
+
+
 KEY_ISR:
     LDR R0, =0xFF200050    // base address of pushbutton KEY port
     LDR R1, [R0, #0xC]     // read edge capture register
-	LDR R2, =PB_int_flag
-	STR R1, [R2]		   // write to PB_int_flag
     MOV R2, #0xF
     STR R2, [R0, #0xC]     // clear the interrupt
+    LDR R0, =0xFF200020    // base address of HEX display
 CHECK_KEY0:
     MOV R3, #0x1
     ANDS R3, R3, R1        // check for KEY0
@@ -271,7 +304,8 @@ IS_KEY3:
     STR R2, [R0]           // display "3"
 END_KEY_ISR:
     BX LR
-	
+
+
 ARM_TIM_ISR:
 	LDR R0, =ISR_MEMORY
 	MOV R1, #1
@@ -289,11 +323,8 @@ ARM_TIM_ISR:
 @ returns indices of pressed push buttons
 @ return: R0
 read_PB_data_ASM:
-	PUSH {R4}
-	LDR R4, =PB_MEMORY
-	LDR R0, [R4]
-	
-	POP {R4}
+	LDR R0, =PB_MEMORY
+	LDR R0, [R0]
 	BX LR
 	
 
