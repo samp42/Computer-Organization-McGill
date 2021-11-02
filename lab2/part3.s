@@ -146,10 +146,11 @@ SERVICE_IRQ:
  Pushbutton_check:
     @ pushbutton interrupt
 	CMP R5, #73
+	BL KEY_ISR
 	
 	@ timer interrupt
 	CMP R5, #29
-	//BL 
+	BL ARM_TIM_ISR
 	
 	@ unknown interrupt
 	BNE UNEXPECTED
@@ -241,9 +242,10 @@ CONFIG_INTERRUPT:
 KEY_ISR:
     LDR R0, =0xFF200050    // base address of pushbutton KEY port
     LDR R1, [R0, #0xC]     // read edge capture register
+	LDR R2, =PB_int_flag
+	STR R1, [R2]		   // write to PB_int_flag
     MOV R2, #0xF
     STR R2, [R0, #0xC]     // clear the interrupt
-    LDR R0, =0xFF200020    // based address of HEX display
 CHECK_KEY0:
     MOV R3, #0x1
     ANDS R3, R3, R1        // check for KEY0
@@ -271,6 +273,9 @@ IS_KEY3:
 END_KEY_ISR:
     BX LR
 	
+ARM_TIM_ISR:
+	BX LR
+
 	
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
@@ -475,3 +480,4 @@ add_tens_loop:
 	POP {R4}
 	BX LR
 	
+.end
