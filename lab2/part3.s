@@ -5,8 +5,9 @@
 .equ CONTROL_MEMORY, 0xfffec608
 .equ ISR_MEMORY, 0xfffec60c
 .equ PRESCALER_VALUE, 0x7f
-
 .equ LOAD_VALUE, 0x00003d09
+
+tim_int_flag : .word 0x0
 
 .equ MAX_MS, 0x64// 100 milliseconds (can only see 10th and 100th of seconds)
 .equ MAX_S, 0x3c // 60 seconds
@@ -146,11 +147,11 @@ SERVICE_IRQ:
  Pushbutton_check:
     @ pushbutton interrupt
 	CMP R5, #73
-	BL KEY_ISR
+	BLEQ KEY_ISR
 	
 	@ timer interrupt
 	CMP R5, #29
-	BL ARM_TIM_ISR
+	BLEQ ARM_TIM_ISR
 	
 	@ unknown interrupt
 	BNE UNEXPECTED
@@ -274,6 +275,12 @@ END_KEY_ISR:
     BX LR
 	
 ARM_TIM_ISR:
+	LDR R0, =ISR_MEMORY
+	MOV R1, #1
+	LDR R2, =tim_int_flag
+	STR R1, [R2]		   // write to PB_int_flag
+    MOV R2, #0xF
+    STR R2, [R0]     	   // clear the interrupt
 	BX LR
 
 	
