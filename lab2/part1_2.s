@@ -266,14 +266,14 @@ read_PB_edgecp_ASM:
 
 @ clears the pushbuttons Edgecapture register
 PB_clear_edgecp_ASM:
-	@ TODO: DON'T READ, WRITE 1 DIRECTLY
-	PUSH {R4, LR}
+	PUSH {R4-R5, LR}
 	BL read_PB_edgecp_ASM
 	
 	LDR R4, =PB_EDGCAP_MEMORY
-	STR R0, [R4]
+	MOV R5, #0xf
+	STR R5, [R4]
 	
-	POP {R4, LR}
+	POP {R4-R5, LR}
 	BX LR
 
 @ enables interrupt function (bit mask to 1)
