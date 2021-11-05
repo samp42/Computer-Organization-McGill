@@ -17,6 +17,7 @@
 
 // push buttons
 .equ PB_MEMORY, 0xff200050
+.equ PB_EDGCAP_MEMORY, 0xff20005c
 
 // HEX
 .equ HEX0_MEMORY, 0xff200020
@@ -96,22 +97,22 @@ _start:
 	BL ARM_TIM_config_ASM
 	
 LOOP:
-	BL read_PB_data_ASM
+	BL read_PB_edgecp_ASM
 	@ test PB0
 	MOV R12, R0
-	TEQ R12, #1
-	MOVEQ R0, R10
-	MOVEQ R1, R11
-	ORREQ R1, #0x1
-	BLEQ ARM_TIM_config_ASM
+	TST R12, #1
+	MOVNE R0, R10
+	MOVNE R1, R11
+	ORRNE R1, #0x1
+	BLNE ARM_TIM_config_ASM
 	@ test PB1
-	TEQ R12, #0x2
-	MOVEQ R0, R10
-	MOVEQ R1, R11
-	TSTEQ R1, #0x1
-	SUBEQ R1, #1
-	TEQ R12, #0x2
-	BLEQ ARM_TIM_config_ASM
+	TST R12, #0x2
+	MOVNE R0, R10
+	MOVNE R1, R11
+	TSTNE R1, #0x1
+	SUBNE R1, #1
+	TST R12, #0x2
+	BLNE ARM_TIM_config_ASM
 	
 	BL ARM_TIM_read_INT_ASM
 	@ check if F bit is 1
@@ -195,6 +196,39 @@ read_PB_data_ASM:
 	LDR R0, [R0]
 	
 	BX LR
+	
+	
+@ return indices of push buttons that have been pressed and released (falling edge)
+@ return: R0
+read_PB_edgecp_ASM:
+	PUSH {R4-R5}
+	PUSH {LR}
+	BL read_PB_data_ASM
+	POP {LR}
+	MVN R4, R0
+	
+	LDR R5, =PB_EDGCAP_MEMORY
+	LDR R5, [R5]
+	
+	AND R0, R4, R5
+	
+	POP {R4-R5}
+	
+	BX LR
+
+
+@ clears the pushbuttons Edgecapture register
+PB_clear_edgecp_ASM:
+	PUSH {R4-R5, LR}
+	BL read_PB_edgecp_ASM
+	
+	LDR R4, =PB_EDGCAP_MEMORY
+	MOV R5, #0xf
+	STR R5, [R4]
+	
+	POP {R4-R5, LR}
+	BX LR
+	
 
 @ R0: Load value
 @ R1: configuration bits in control register
