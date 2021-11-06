@@ -85,8 +85,8 @@ _start:
 	
 	
 	@ E bit
-	@ enable when PB0 is pressed
-	@ disable when PB1 is pressed
+	@ enable when PB0 is released
+	@ disable when PB1 is released
 	MOV R8, #0
 	ORR R7, R8
 
@@ -97,10 +97,10 @@ _start:
 	BL ARM_TIM_config_ASM
 	
 LOOP:
-	BL read_PB_edgecp_ASM
+	BL PB_clear_edgecp_ASM
 	@ test PB0
 	MOV R12, R0
-	TST R12, #1
+	TST R12, #0x1
 	MOVNE R0, R10
 	MOVNE R1, R11
 	ORRNE R1, #0x1
@@ -113,6 +113,10 @@ LOOP:
 	SUBNE R1, #1
 	TST R12, #0x2
 	BLNE ARM_TIM_config_ASM
+	
+	@ test PB2
+	TST R12, #0x4
+	BNE clear_stopwatch
 	
 	BL ARM_TIM_read_INT_ASM
 	@ check if F bit is 1
@@ -182,8 +186,17 @@ LOOP:
 	MOVGE R5, #0
 	ADDGE R6, #1
 	
+	
 skip_increment:
 	B LOOP
+	
+clear_stopwatch:
+	MOV R0, #0x3f
+	BL HEX_clear_ASM
+	MOV R4, #0
+	MOV R5, #0
+	MOV R6, #0
+	B skip_increment
 	
 // -----------------------------------------------------------------
 // -----------------------------------------------------------------
@@ -223,8 +236,8 @@ PB_clear_edgecp_ASM:
 	BL read_PB_edgecp_ASM
 	
 	LDR R4, =PB_EDGCAP_MEMORY
-	MOV R5, #0xf
-	STR R5, [R4]
+	@MOV R5, #0xf
+	STR R0, [R4]
 	
 	POP {R4-R5, LR}
 	BX LR
