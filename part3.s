@@ -1,3 +1,4 @@
+.global _start
 .data
 // counter
 .equ LOAD_MEMORY, 0xfffec600
@@ -83,6 +84,42 @@ _start:
     // To DO: write to the pushbutton KEY interrupt mask register
     // Or, you can call enable_PB_INT_ASM subroutine from previous task
     // to enable interrupt for ARM A9 private timer, use ARM_TIM_config_ASM subroutine
+	// ENABLE PB INT
+	MOV R0, #0x7
+	BL enable_PB_INT_ASM
+	// ENABLE TIMER INT
+	@ load register
+	LDR R0, =LOAD_VALUE
+	@ save it for later
+	MOV R10, R0
+	
+	@ control register
+	LDR R1, =PRESCALER_VALUE
+	@ prescaler
+	LSL R1, #8
+	@ I bit
+	@ interrupt required ???
+	MOV R7, #1
+	LSL R7, #2
+	@ A bit
+	@ automatic timer restart
+	MOV R8, #1
+	LSL R8, #1
+	ORR R7, R8
+	
+	
+	@ E bit
+	@ enable when PB0 is released
+	@ disable when PB1 is released
+	MOV R8, #0
+	ORR R7, R8
+
+	ORR R1, R7
+	@ save it for later
+	MOV R11, R1
+	
+	BL ARM_TIM_config_ASM
+	
     LDR        R0, =0xFF200050      // pushbutton KEY base address
     MOV        R1, #0xF             // set interrupt mask bits
     STR        R1, [R0, #0x8]       // interrupt mask register (base + 8)
@@ -90,17 +127,22 @@ _start:
     MOV        R0, #0b01010011      // IRQ unmasked, MODE = SVC
     MSR        CPSR_c, R0
 	
+	// setup high-level timer
+	MOV R4, #0 @ ms
+	MOV R5, #0 @ s
+	MOV R6, #0 @ min
+	
+	@ constants
+	LDR R7, =MAX_MS
+	LDR R8, =MAX_S
+	LDR R9, =MAX_MIN
+	
 IDLE:
-	BL ARM_TIM_read_INT_ASM
-	@ check if F bit is 1
-	TEQ R0, #0x1
-	
-	BNE skip_increment
-	
-	@ if F == 1
-	@ reset F bit
-	
-	BL ARM_TIM_clear_INT_ASM
+	@ increment timer if timer interrupt
+	LDR R3, =PB_int_flag
+	LDR R3, [R3]
+	CMP R3, #1
+	BNE IDLE
 	
 	MOV R0, R4
 	
@@ -159,8 +201,7 @@ IDLE:
 	MOVGE R5, #0
 	ADDGE R6, #1
 	
-skip_increment:
-    B IDLE // This is where you write your objective task
+    B IDLE
 
 
 /*--- Undefined instructions ---------------------------------------- */
@@ -186,6 +227,9 @@ SERVICE_IRQ:
    Then call the corresponding ISR
    If the ID is not recognized, branch to UNEXPECTED
    See the assembly example provided in the De1-SoC Computer_Manual on page 46 */
+ Timer_check:
+ 	CMP R5, #29
+	BLEQ ARM_TIM_ISR
  Pushbutton_check:
     CMP R5, #73
 UNEXPECTED:
@@ -282,37 +326,55 @@ CHECK_KEY0:
     MOV R3, #0x1
     ANDS R3, R3, R1        // check for KEY0
     BEQ CHECK_KEY1
-    MOV R2, #0b00111111
-    STR R2, [R0]           // display "0"
+	// start timer
+	MOV R1, R11
+	AND R3, R1, #1 @ if E bit is 1, set to 0 to disable timer
+	SUBS R3, #1
+	SUBEQ R1, #1
+	MOVEQ R0, R10
+	BLEQ ARM_TIM_config_ASM
+	LDR R0, =PB_int_flag
+	MOV R1, #1
+	STR R1, [R0]
+	
     B END_KEY_ISR
 CHECK_KEY1:
     MOV R3, #0x2
     ANDS R3, R3, R1        // check for KEY1
     BEQ CHECK_KEY2
-    MOV R2, #0b00000110
-    STR R2, [R0]           // display "1"
+    // stop timer
+	MOV R1, R11
+	AND R3, R1, #1 @ if E bit is 1, set to 0 to disable timer
+	SUBS R3, #1
+	SUBEQ R1, #1
+	MOVEQ R0, R10
+	BLEQ ARM_TIM_config_ASM
+	LDR R0, =PB_int_flag
+	MOV R1, #0
+	STR R1, [R0]
+	
     B END_KEY_ISR
 CHECK_KEY2:
     MOV R3, #0x4
     ANDS R3, R3, R1        // check for KEY2
-    BEQ IS_KEY3
-    MOV R2, #0b01011011
-    STR R2, [R0]           // display "2"
+    BEQ END_KEY_ISR
+    // reset timer
+	MOV R4, #0
+	MOV R5, #0
+	MOV R5, #0
+	
     B END_KEY_ISR
-IS_KEY3:
-    MOV R2, #0b01001111
-    STR R2, [R0]           // display "3"
 END_KEY_ISR:
     BX LR
 
 
 ARM_TIM_ISR:
-	LDR R0, =ISR_MEMORY
 	MOV R1, #1
 	LDR R2, =tim_int_flag
-	STR R1, [R2]		   // write to PB_int_flag
-    MOV R2, #0xF
-    STR R2, [R0]     	   // clear the interrupt
+	STR R1, [R2]		   	// write to tim_int_flag
+	LDR R0, =ISR_MEMORY
+    MOV R2, #0x1
+    STR R2, [R0]	   		// clear the interrupt
 	BX LR
 
 	
