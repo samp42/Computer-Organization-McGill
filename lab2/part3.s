@@ -82,8 +82,8 @@ _start:
     BL     CONFIG_GIC           // configure the ARM GIC
     // To DO: write to the pushbutton KEY interrupt mask register
     // Or, you can call enable_PB_INT_ASM subroutine from previous task
-	MOV R0, #0xf
-	BL enable_PB_INT_ASM
+	@MOV R0, #0xf
+	@BL enable_PB_INT_ASM
 	
     // to enable interrupt for ARM A9 private timer, use ARM_TIM_config_ASM subroutine
     LDR        R0, =0xFF200050      // pushbutton KEY base address
@@ -117,7 +117,7 @@ _start:
 	@ prescaler
 	LSL R1, #8
 	@ I bit
-	@ interrupt required ???
+	@ interrupt required
 	MOV R7, #1
 	LSL R7, #2
 	@ A bit
@@ -140,9 +140,17 @@ _start:
 	BL ARM_TIM_config_ASM
 	
 IDLE:
-	@ if PB0, count
+	@ if PB0, enable timer
+	LDR R2, =PB_int_flag
+	LDR R2, [R2]
+	CMP R2, #1
+	MOVEQ R1, R11
+	CMPEQ R1, #1
+	ADDNE R1, #1
+	MOV R0, R10
+	BL ARM_TIM_config_ASM
 	
-	
+	B IDLE
 	
 
 /*--- Undefined instructions ---------------------------------------- */
@@ -168,14 +176,13 @@ SERVICE_IRQ:
    Then call the corresponding ISR
    If the ID is not recognized, branch to UNEXPECTED
    See the assembly example provided in the De1-SoC Computer_Manual on page 46 */
+ @Timer_check:
+	@CMP R5, #29
+	@BLEQ ARM_TIM_ISR 
  Pushbutton_check:
     CMP R5, #73
-	BNE Timer_check
+	@BNE Timer_check
 	BL KEY_ISR
-Timer_check:
-	CMP R5, #29
-	BNE UNEXPECTED
-	BL ARM_TIM_ISR
 UNEXPECTED:
     BNE UNEXPECTED      // if not recognized, stop here
     BL KEY_ISR
@@ -298,7 +305,7 @@ ARM_TIM_ISR:
 	LDR R0, =ISR_MEMORY
 	MOV R1, #1
 	LDR R2, =tim_int_flag
-	STR R1, [R2]		   // write to PB_int_flag
+	STR R1, [R2]		   // write to tim_int_flag
     MOV R2, #0xF
     STR R2, [R0]     	   // clear the interrupt
 	BX LR
@@ -505,4 +512,3 @@ add_tens_loop:
 	BX LR
 	
 .end
-
