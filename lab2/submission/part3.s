@@ -7,6 +7,8 @@
 .equ PRESCALER_VALUE, 0x7f
 .equ LOAD_VALUE, 0x00003d09
 
+control_reg_value : .word 0x0
+
 tim_int_flag : .word 0x0
 
 .equ MAX_MS, 0x64// 100 milliseconds (can only see 10th and 100th of seconds)
@@ -326,12 +328,13 @@ CHECK_KEY0:
     ANDS R3, R3, R1        // check for KEY0
     BEQ CHECK_KEY1
 	// start timer
-	MOV R1, R11
-	AND R3, R1, #1 @ if E bit is 1, set to 0 to disable timer
-	SUBS R3, #1
-	SUBEQ R1, #1
-	MOVEQ R0, R10
-	BLEQ ARM_TIM_config_ASM
+	LDR R0, =LOAD_VALUE
+	LDR R1, =control_reg_value
+	LDR R1, [R1]
+	ADD R1, #1
+	PUSH {LR}
+	BL ARM_TIM_config_ASM
+	POP {LR}
 	LDR R0, =PB_int_flag
 	MOV R1, #1
 	STR R1, [R0]
@@ -342,12 +345,13 @@ CHECK_KEY1:
     ANDS R3, R3, R1        // check for KEY1
     BEQ CHECK_KEY2
     // stop timer
-	MOV R1, R11
-	AND R3, R1, #1 @ if E bit is 1, set to 0 to disable timer
-	SUBS R3, #1
-	SUBEQ R1, #1
-	MOVEQ R0, R10
-	BLEQ ARM_TIM_config_ASM
+	LDR R0, =LOAD_VALUE
+	LDR R1, =control_reg_value
+	LDR R1, [R1]
+	SUB R1, #1
+	PUSH {LR}
+	BL ARM_TIM_config_ASM
+	POP {LR}
 	LDR R0, =PB_int_flag
 	MOV R1, #0
 	STR R1, [R0]
