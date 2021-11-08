@@ -8,6 +8,7 @@
 .equ LOAD_VALUE, 0x00003d09
 
 tim_int_flag : .word 0x0
+control_reg_value : .word 0x0
 
 .equ MAX_MS, 0x64// 100 milliseconds (can only see 10th and 100th of seconds)
 .equ MAX_S, 0x3c // 60 seconds
@@ -89,15 +90,13 @@ _start:
 	// ENABLE TIMER INT
 	@ load register
 	LDR R0, =LOAD_VALUE
-	@ save it for later
-	MOV R10, R0
 	
 	@ control register
 	LDR R1, =PRESCALER_VALUE
 	@ prescaler
 	LSL R1, #8
 	@ I bit
-	@ interrupt required ???
+	@ interrupt requireD
 	MOV R7, #1
 	LSL R7, #2
 	@ A bit
@@ -115,7 +114,9 @@ _start:
 
 	ORR R1, R7
 	@ save it for later
-	MOV R11, R1
+	LDR R11, =control_reg_value
+	LDR R11, [R11]
+	STR R1, [R11]
 	
 	BL ARM_TIM_config_ASM
 	
@@ -186,6 +187,12 @@ IDLE:
 	MOV R1, R8
 	BL HEX_write_ASM
 	
+	@ check for timer interrupt to update timer
+	LDR R3, =tim_int_flag
+	LDR R3, [R3]
+	TEQ R3, #1
+	BNE skip_increment
+	
 	@ increment ms
 	ADD R4, #1
 	
@@ -200,6 +207,7 @@ IDLE:
 	MOVGE R5, #0
 	ADDGE R6, #1
 	
+skip_increment:
     B IDLE
 
 
@@ -316,38 +324,45 @@ CONFIG_INTERRUPT:
 
 
 KEY_ISR:
+	PUSH {R10-R11}
     LDR R0, =0xFF200050    // base address of pushbutton KEY port
     LDR R1, [R0, #0xC]     // read edge capture register
     MOV R2, #0xF
     STR R2, [R0, #0xC]     // clear the interrupt
-    LDR R0, =0xFF200020    // base address of HEX display
 CHECK_KEY0:
     MOV R3, #0x1
     ANDS R3, R3, R1        // check for KEY0
     BEQ CHECK_KEY1
 	// start timer
+	// add 1 to control register to set E bit to 1 (enable timer)
+	LDR R10, =control_reg_value
+	LDR R11, [R10]
+	ADD R11, #1
+	STR R11, [R10]
+	LDR R0, =LOAD_VALUE
 	MOV R1, R11
-	AND R3, R1, #1 @ if E bit is 1, set to 0 to disable timer
-	SUBS R3, #1
-	SUBEQ R1, #1
-	MOVEQ R0, R10
-	BLEQ ARM_TIM_config_ASM
+	PUSH {LR}
+	BL ARM_TIM_config_ASM
+	POP {LR}
 	LDR R0, =PB_int_flag
 	MOV R1, #1
 	STR R1, [R0]
-	
+
     B END_KEY_ISR
 CHECK_KEY1:
     MOV R3, #0x2
     ANDS R3, R3, R1        // check for KEY1
     BEQ CHECK_KEY2
     // stop timer
+	LDR R10, =control_reg_value
+	LDR R11, [R10]
+	SUB R11, #1
+	STR R11, [R10]
+	LDR R0, =LOAD_VALUE
 	MOV R1, R11
-	AND R3, R1, #1 @ if E bit is 1, set to 0 to disable timer
-	SUBS R3, #1
-	SUBEQ R1, #1
-	MOVEQ R0, R10
-	BLEQ ARM_TIM_config_ASM
+	PUSH {LR}
+	BL ARM_TIM_config_ASM
+	POP {LR}
 	LDR R0, =PB_int_flag
 	MOV R1, #0
 	STR R1, [R0]
@@ -364,16 +379,18 @@ CHECK_KEY2:
 	
     B END_KEY_ISR
 END_KEY_ISR:
+	POP {R10-R11}
     BX LR
 
 
 ARM_TIM_ISR:
 	MOV R1, #1
 	LDR R2, =tim_int_flag
-	STR R1, [R2]		   	// write to tim_int_flag
-	LDR R0, =ISR_MEMORY
-    MOV R2, #0x1
-    STR R2, [R0]	   		// clear the interrupt
+	STR R1, [R2]	   		// write to tim_int_flag
+	// clear the interrupt
+	PUSH {LR}
+	BL ARM_TIM_clear_INT_ASM
+	POP {LR}
 	BX LR
 
 	
