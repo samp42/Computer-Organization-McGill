@@ -82,6 +82,9 @@ _start:
     BL     CONFIG_GIC           // configure the ARM GIC
     // To DO: write to the pushbutton KEY interrupt mask register
     // Or, you can call enable_PB_INT_ASM subroutine from previous task
+	MOV R0, #0xf
+	BL enable_PB_INT_ASM
+	
     // to enable interrupt for ARM A9 private timer, use ARM_TIM_config_ASM subroutine
     LDR        R0, =0xFF200050      // pushbutton KEY base address
     MOV        R1, #0xF             // set interrupt mask bits
@@ -90,78 +93,57 @@ _start:
     MOV        R0, #0b01010011      // IRQ unmasked, MODE = SVC
     MSR        CPSR_c, R0
 	
+	
+	// COUNTER SETUP
+	@ ms
+	MOV R4, #0
+	@ s
+	MOV R5, #0
+	@ min
+	MOV R6, #0
+	
+	@ constants
+	LDR R7, =MAX_MS
+	LDR R8, =MAX_S
+	LDR R9, =MAX_MIN
+
+	@ load register
+	LDR R0, =LOAD_VALUE
+	@ save it for later
+	MOV R10, R0
+	
+	@ control register
+	LDR R1, =PRESCALER_VALUE
+	@ prescaler
+	LSL R1, #8
+	@ I bit
+	@ interrupt required ???
+	MOV R7, #1
+	LSL R7, #2
+	@ A bit
+	@ automatic timer restart
+	MOV R8, #1
+	LSL R8, #1
+	ORR R7, R8
+	
+	
+	@ E bit
+	@ enable when PB0 is released
+	@ disable when PB1 is released
+	MOV R8, #0
+	ORR R7, R8
+
+	ORR R1, R7
+	@ save it for later
+	MOV R11, R1
+	
+	BL ARM_TIM_config_ASM
+	
 IDLE:
-	BL ARM_TIM_read_INT_ASM
-	@ check if F bit is 1
-	TEQ R0, #0x1
+	@ if PB0, count
 	
-	BNE skip_increment
 	
-	@ if F == 1
-	@ reset F bit
 	
-	BL ARM_TIM_clear_INT_ASM
-	
-	MOV R0, R4
-	
-	@ divide into tens
-	BL base_conversion_ASM
-	MOV R8, R0
-	
-	@ HEX_write_ASM has different arguments
-	@ MS
-	MOV R0, #0x1
-	BL HEX_write_ASM
-	
-	MOV R0, #0x2
-	MOV R1, R8
-	BL HEX_write_ASM
-	
-	@ S
-	MOV R0, R5
-	
-	@ divide into tens
-	BL base_conversion_ASM
-	MOV R8, R0
-	
-	MOV R0, #0x4
-	BL HEX_write_ASM
-	
-	MOV R0, #0x8
-	MOV R1, R8
-	BL HEX_write_ASM
-	
-	@ MIN
-	MOV R0, R6
-	
-	@ divide into tens
-	BL base_conversion_ASM
-	MOV R8, R0
-	
-	MOV R0, #0x10
-	BL HEX_write_ASM
-	
-	MOV R0, #0x20
-	MOV R1, R8
-	BL HEX_write_ASM
-	
-	@ increment ms
-	ADD R4, #1
-	
-	LDR R3, =MAX_MS
-	CMP R4, R3
-	@ reset ms when reaches MAX_MS and increment s
-	MOVGE R4, #0
-	ADDGE R5, #1
-
-	LDR R3, =MAX_S
-	CMP R5, R3
-	MOVGE R5, #0
-	ADDGE R6, #1
-	
-skip_increment:
-    B IDLE // This is where you write your objective task
-
 
 /*--- Undefined instructions ---------------------------------------- */
 SERVICE_UND:
@@ -188,6 +170,12 @@ SERVICE_IRQ:
    See the assembly example provided in the De1-SoC Computer_Manual on page 46 */
  Pushbutton_check:
     CMP R5, #73
+	BNE Timer_check
+	BL KEY_ISR
+Timer_check:
+	CMP R5, #29
+	BNE UNEXPECTED
+	BL ARM_TIM_ISR
 UNEXPECTED:
     BNE UNEXPECTED      // if not recognized, stop here
     BL KEY_ISR
@@ -517,3 +505,4 @@ add_tens_loop:
 	BX LR
 	
 .end
+
