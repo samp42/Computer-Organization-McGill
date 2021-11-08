@@ -1,4 +1,3 @@
-.global _start
 .data
 // counter
 .equ LOAD_MEMORY, 0xfffec600
