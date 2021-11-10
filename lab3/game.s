@@ -142,6 +142,54 @@ EXIT_PS_DATA:
 	POP {R4-R5}
 	BX LR
 
+@ R0: x coordinate
+@ R1: thickness (pixels)
+@ R2: color
+draw_ver_line_ASM:
+    BX LR
+
+@ R0: y coordinate
+@ R1: thickness (pixels)
+@ R2: color
+draw_hor_line_ASM:
+    BX LR
+
+
+
+@ pattern:
+@
+@ 011000110
+@ 001101100
+@ 000111000
+@ 001101100
+@ 011000110
+@
+@ R0: x coordinate
+@ R1: y coordinate
+draw_X_ASM:
+    BX LR
+
+@ pattern:
+@
+@ 000111000
+@ 011000110
+@ 110000011
+@ 011000110
+@ 000111000
+@
+@ R0: x coordinate
+@ R1: y coordinate
+draw_O_ASM:
+    BX LR
+
+@ R0: player (0 (X) / 1 (O))
+display_turn_ASM:
+    BX LR
+
+@ R0: winner (0: player0 / 1: player1 / 2: draw)
+display_result_ASM:
+    BX LR
+
 END:
     B END
 .end
