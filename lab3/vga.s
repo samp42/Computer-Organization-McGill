@@ -1,12 +1,18 @@
 .data
 // pixel buffer
-.equ PIX_BUFFER, 0xc8000000
-.equ PIX_BUFFER_WIDTH, 319
-.equ PIX_BUFFER_HEIGHT, 239
+.equ PIX_BUFFER, 0xC8000000
+.equ PIX_BUFFER_WIDTH, 319		// x
+.equ PIX_BUFFER_HEIGHT, 239		// y
+
+// character buffer
+.equ CHAR_BUFFER, 0xC9000000
+.equ CHAR_BUFFER_WIDTH, 79		// x
+.equ CHAR_BUFFER_HEIGHT, 59		// y
+
 .text
 .global _start
 _start:
-	BL	VGA_draw_point_ASM
+	BL	VGA_clear_pixelbuff_ASM
 	bl      draw_test_screen
 end:
 	b       end
@@ -33,27 +39,68 @@ VGA_draw_point_ASM:
 
 @ sets every pixel in pixel buffer to 0 (black screen)
 VGA_clear_pixelbuff_ASM:
-	PUSH {R0-R2}
-	LDR R0, =PIX_BUFFER_WIDTH
-	LDR R1, =PIX_BUFFER_HEIGHT
+	PUSH {R0-R2, R4-R5}
+	LDR R4, =PIX_BUFFER_WIDTH
+	LDR R5, =PIX_BUFFER_HEIGHT
 	MOV R2, #0
+
+PIX_BUFFER_CLEAR_LOOP:
+	LSL R0, R4, #1
+	LSL R1, R5, #10
 	
-	X_LOOP:
+	PUSH {LR}
+	BL	VGA_draw_point_ASM
+	POP {LR}
 	
-	Y_LOOP:
-	
-PIX_CLEAR_END:
-	POP {R0-R2}
+	SUBS R0, #1
+	BLT PIX_BUFFER_CLEAR_END
+	SUBS R1, #1
+	LDRLT R1, =PIX_BUFFER_HEIGHT
+	B PIX_BUFFER_CLEAR_LOOP
+
+PIX_BUFFER_CLEAR_END:
+	POP {R0-R2, R4-R5}
 	BX LR
 
 
-
+@ writes character to given location in character buffer
+@ R0: x coordinate
+@ R1: y coordinate
+@ R2: ASCII code of character
 VGA_write_char_ASM:
+	PUSH {R0-R1, R4}
+	LDR R4, =CHAR_BUFFER
+	LSL R1, #7
+	ADD R0, R1
+	ADD R0, R4
+	STRH R2, [R0]
+	POP {R0-R1, R4}
 	BX LR
 
 
 @ sets every character in character buffer to 0
 VGA_clear_charbuff_ASM:
+	PUSH {R0-R2, R4-R5}
+	LDR R4, =CHAR_BUFFER_WIDTH
+	LDR R5, =CHAR_BUFFER_HEIGHT
+	MOV R2, #0
+
+CHAR_BUFFER_CLEAR_LOOP:
+	MOV R0, R4
+	LSL R1, R5, #7
+	
+	PUSH {LR}
+	BL	VGA_write_char_ASM
+	POP {LR}
+	
+	SUBS R0, #1
+	BLT CHAR_BUFFER_CLEAR_END
+	SUBS R1, #1
+	LDRLT R1, =CHAR_BUFFER_HEIGHT
+	B CHAR_BUFFER_CLEAR_LOOP
+
+CHAR_BUFFER_CLEAR_END:
+	POP {R0-R2, R4-R5}
 	BX LR
 
 
