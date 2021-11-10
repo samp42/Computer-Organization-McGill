@@ -12,7 +12,6 @@
 .text
 .global _start
 _start:
-	BL	VGA_clear_pixelbuff_ASM
 	bl      draw_test_screen
 end:
 	b       end
@@ -176,7 +175,7 @@ draw_test_screen:
 	mov     r2, #87
 	mov     r1, #5
 	mov     r0, #26
-        bl      VGA_write_char_ASM
+    bl      VGA_write_char_ASM
 	mov     r2, #111
 	mov     r1, #5
 	mov     r0, #27
