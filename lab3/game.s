@@ -21,6 +21,13 @@
 .global _start
 _start:
 
+	MOV R0, #200
+	MOV R1, #50
+	LDR R3, =GREEN
+	MOV R4, #10
+
+	BL draw_ver_line_ASM
+
     // fill screen with color
 
     // draw 207x207 px grid
@@ -71,9 +78,10 @@ PIX_BUFFER_CLEAR_LOOP:
 	BL	VGA_draw_point_ASM
 	POP {LR}
 	
-	SUBS R0, #1
+	// loop logic
+	SUBS R0, #1 // x--
 	LDRLT R0, =PIX_BUFFER_WIDTH
-	SUBLTS R1, #1
+	SUBLTS R1, #1 // y--
 	LDRLT R1, =PIX_BUFFER_HEIGHT
 	BLT PIX_BUFFER_CLEAR_END
 	B PIX_BUFFER_CLEAR_LOOP
@@ -110,9 +118,10 @@ CHAR_BUFFER_CLEAR_LOOP:
 	BL	VGA_write_char_ASM
 	POP {LR}
 	
-	SUBS R0, #1
+	// loop logic
+	SUBS R0, #1 // x--
 	LDRLT R0, =CHAR_BUFFER_WIDTH
-	SUBLTS R1, #1
+	SUBLTS R1, #1 // y--
 	LDRLT R1, =CHAR_BUFFER_HEIGHT
 	BLT CHAR_BUFFER_CLEAR_END
 	B CHAR_BUFFER_CLEAR_LOOP
@@ -142,18 +151,57 @@ EXIT_PS_DATA:
 	POP {R4-R5}
 	BX LR
 
+
 @ R0: x coordinate
 @ R1: thickness (pixels)
 @ R2: color
+@ R3: padding
 draw_ver_line_ASM:
+	PUSH {R1, R4-R6}
+	MOV R4, R1
+	LSR R4, #1 // thickness / 2
+	LDR R6, =PIX_BUFFER_WIDTH
+
+	// x lower limit
+	SUB R5, R0, R4
+	// x greater limit
+	ADD R0, R4
+
+	CMP R0, R6
+	// take into account if too close to right edge
+	MOVGT R0, R6
+	// y
+	LDR R1, =PIX_BUFFER_HEIGHT
+	SUB R1, R3
+
+	// draw point for [x - (thickness/2) , x + (thickness/2] from top to bottom
+VER_LINE_LOOP:
+	PUSH {LR}
+	BL	VGA_draw_point_ASM
+	POP {LR}
+
+	// loop logic
+	SUB R1, #1 // y--
+	CMP R1, R3 // limit is padding
+	// reset y when y < padding
+	LDRLT R1, =PIX_BUFFER_HEIGHT
+	SUBLT R1, R3 // subtract padding from height
+	SUBLT R0, #1 // x--
+	CMP R0, R5
+	BLT VER_LINE_END
+	B VER_LINE_LOOP
+
+VER_LINE_END:
+	POP {R1, R4-R6}
     BX LR
+
 
 @ R0: y coordinate
 @ R1: thickness (pixels)
 @ R2: color
+@ R3: padding
 draw_hor_line_ASM:
     BX LR
-
 
 
 @ pattern:
@@ -169,6 +217,7 @@ draw_hor_line_ASM:
 draw_X_ASM:
     BX LR
 
+
 @ pattern:
 @
 @ 000111000
@@ -182,13 +231,16 @@ draw_X_ASM:
 draw_O_ASM:
     BX LR
 
+
 @ R0: player (0 (X) / 1 (O))
 display_turn_ASM:
     BX LR
 
+
 @ R0: winner (0: player0 / 1: player1 / 2: draw)
 display_result_ASM:
     BX LR
+
 
 END:
     B END
