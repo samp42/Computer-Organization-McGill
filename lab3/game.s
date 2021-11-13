@@ -14,21 +14,25 @@
 .equ PS2_CONTROL, 0xFF200104
 
 // colors
-.equ WHITE, 0xFFFF
-.equ BLACK, 0x0000
-.equ GREEN, 0x07E0
+.equ WHITE, 0b1111111111111111
+.equ BLACK, 0b0000000000000000
+.equ GREEN, 0b0000011111100000
+.equ RED,	0b1111100000000000
+.equ BLUE,	0b0000000000011111
 
 .text
 .global _start
 _start:
 
-	// draw a 1 pixels wide green line centered at x=200 and 50 <= y <= 239-50
+	// draw a 1 pixel wide green line centered at x=200 and 50 <= y <= 239-50
 	MOV R0, #200
-	MOV R1, #2
-	LDR R2, =WHITE
-	MOV R3, #60
+	MOV R1, #5
+	LDR R2, =RED
+	MOV R3, #20
 
+	PUSH {LR}
 	BL draw_ver_line_ASM
+	POP {LR}
 
     // fill screen with color
 

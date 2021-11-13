@@ -1,6 +1,7 @@
 .data
 // pixel buffer
 .equ PIX_BUFFER, 0xC8000000
+.equ PIX_BUFFER_END, 0xC803BE7E
 .equ PIX_BUFFER_WIDTH, 319		// x
 .equ PIX_BUFFER_HEIGHT, 239		// y
 
