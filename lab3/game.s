@@ -1,5 +1,6 @@
 // pixel buffer
 .equ PIX_BUFFER, 0xC8000000
+.equ PIX_BUFFER_END, 0xC803BE7E
 .equ PIX_BUFFER_WIDTH, 319		// x
 .equ PIX_BUFFER_HEIGHT, 239		// y
 
@@ -21,10 +22,11 @@
 .global _start
 _start:
 
+	// draw a 1 pixels wide green line centered at x=200 and 50 <= y <= 239-50
 	MOV R0, #200
-	MOV R1, #50
-	LDR R3, =GREEN
-	MOV R4, #10
+	MOV R1, #2
+	LDR R2, =WHITE
+	MOV R3, #60
 
 	BL draw_ver_line_ASM
 
@@ -54,14 +56,23 @@ GAME_LOOP:
 @ R1: y coordinate
 @ R2: color
 VGA_draw_point_ASM:
-	PUSH {R0-R1, R4}
+	PUSH {R0-R1, R4-R5}
 	LDR R4, =PIX_BUFFER
+	LDR R5, =PIX_BUFFER_END
 	LSL R0, #1
 	LSL R1, #10
 	ADD R0, R1
 	ADD R0, R4
+	// make sure we are within the buffer
+	CMP R0, R4
+	BLT SKIP_DRAW
+	CMP R0, R5
+	BGT SKIP_DRAW
+	
 	STRH R2, [R0]
-	POP {R0-R1, R4}
+	
+SKIP_DRAW:
+	POP {R0-R1, R4-R5}
 	BX LR
 
 

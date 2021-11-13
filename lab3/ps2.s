@@ -28,14 +28,23 @@ end:
 @ R1: y coordinate
 @ R2: color
 VGA_draw_point_ASM:
-	PUSH {R0-R1, R4}
+	PUSH {R0-R1, R4-R5}
 	LDR R4, =PIX_BUFFER
+	LDR R5, =PIX_BUFFER_END
 	LSL R0, #1
 	LSL R1, #10
 	ADD R0, R1
 	ADD R0, R4
+	// make sure we are within the buffer
+	CMP R0, R4
+	BLT SKIP_DRAW
+	CMP R0, R5
+	BGT SKIP_DRAW
+	
 	STRH R2, [R0]
-	POP {R0-R1, R4}
+	
+SKIP_DRAW:
+	POP {R0-R1, R4-R5}
 	BX LR
 
 
