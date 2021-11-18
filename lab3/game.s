@@ -4,6 +4,14 @@
 .equ PIX_BUFFER_WIDTH, 319		// x
 .equ PIX_BUFFER_HEIGHT, 239		// y
 
+// grid positions [0,8] from left to right, top to bottom
+.equ X1, 100
+.equ X2, 160
+.equ X3, 220
+.equ Y1, 80
+.equ Y2, 140
+.equ Y3, 200
+
 // character buffer
 .equ CHAR_BUFFER, 0xC9000000
 .equ CHAR_BUFFER_WIDTH, 79		// x
@@ -23,25 +31,15 @@
 .text
 .global _start
 _start:
-
-	// draw a 1 pixel wide green line centered at x=200 and 50 <= y <= 239-50
-	MOV R0, #200
-	MOV R1, #5
-	LDR R2, =RED
-	MOV R3, #20
-
+	
+	// draw grid
 	PUSH {LR}
-	BL draw_ver_line_ASM
+	BL draw_grid_ASM
 	POP {LR}
-
-    // fill screen with color
-
-    // draw 207x207 px grid
 
     // game starts on '0' keyboard input
 
-    // enter game loop
-
+	// enter game loop
 GAME_LOOP:
     // write whose turn it is at top-center
 
@@ -50,7 +48,11 @@ GAME_LOOP:
     // repeat for other player
 
     // when game over, display result
-
+	B GAME_LOOP
+	
+GAME_OVER:
+	
+	B END
 // ------------------------------------------------------------------------------------
 // SUBROUTINES
 // ------------------------------------------------------------------------------------
@@ -216,8 +218,123 @@ VER_LINE_END:
 @ R2: color
 @ R3: padding
 draw_hor_line_ASM:
-    BX LR
+	PUSH {R1, R4-R6}
+	MOV R4, R1
+	LSR R4, #1 // thickness / 2
+	LDR R6, =PIX_BUFFER_HEIGHT
+	// change y to y register (R0 -> R1)
+	MOV R1, R0
 
+	// y lower limit
+	SUB R5, R1, R4
+	// y greater limit
+	ADD R1, R4
+
+	CMP R1, R6
+
+	// take into account if too close to bottom edge
+	MOVGT R1, R6
+	// x
+	LDR R0, =PIX_BUFFER_WIDTH
+	SUB R0, R3
+
+	// draw point for [y - (thickness/2) , y + (thickness/2] from left to right
+HOR_LINE_LOOP:
+	PUSH {LR}
+	BL	VGA_draw_point_ASM
+	POP {LR}
+
+	// loop logic
+	SUB R0, #1 // x--
+	CMP R0, R3 // limit is padding
+	// reset x when x < padding
+	LDRLT R0, =PIX_BUFFER_WIDTH
+	SUBLT R0, R3 // subtract padding from width
+	SUBLT R1, #1 // y--
+	CMP R1, R5
+	BLT HOR_LINE_END
+	B HOR_LINE_LOOP
+
+HOR_LINE_END:
+	POP {R1, R4-R6}
+    BX LR
+	
+
+draw_grid_ASM:
+	PUSH {R0-R1, R3}
+	// make screen black
+	PUSH {LR}
+	BL VGA_clear_pixelbuff_ASM
+	POP {LR}
+	// DRAW GRID (60x60 squares)
+
+	// draw vertical lines
+	MOV R0, #70
+	MOV R1, #3
+	LDR R2, =GREEN
+	MOV R3, #10
+
+	PUSH {LR}
+	BL draw_ver_line_ASM
+	POP {LR}
+	
+	MOV R0, #130
+	PUSH {LR}
+	BL draw_ver_line_ASM
+	POP {LR}
+	
+	MOV R0, #190
+	PUSH {LR}
+	BL draw_ver_line_ASM
+	POP {LR}
+	
+	MOV R0, #250
+	PUSH {LR}
+	BL draw_ver_line_ASM
+	POP {LR}
+	
+	// draw horizontal lines
+	MOV R0, #30
+	MOV R1, #38
+	LDR R2, =BLACK
+	MOV R3, #72
+	PUSH {LR}
+	BL draw_hor_line_ASM
+	POP {LR}
+	
+	
+	MOV R0, #10
+	MOV R1, #3
+	LDR R2, =GREEN
+	MOV R3, #70
+	PUSH {LR}
+	BL draw_hor_line_ASM
+	POP {LR}
+	
+	MOV R0, #50
+	PUSH {LR}
+	BL draw_hor_line_ASM
+	POP {LR}
+
+	MOV R0, #110
+	PUSH {LR}
+	BL draw_hor_line_ASM
+	POP {LR}
+	
+	MOV R0, #170
+	PUSH {LR}
+	BL draw_hor_line_ASM
+	POP {LR}
+	
+	MOV R0, #230
+	PUSH {LR}
+	BL draw_hor_line_ASM
+	POP {LR}
+	
+	// draw 'X' and 'O' in top section
+	
+	POP {R0-R1, R3}
+	BX LR
 
 @ pattern:
 @
