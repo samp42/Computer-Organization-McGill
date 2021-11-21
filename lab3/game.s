@@ -350,8 +350,8 @@ draw_grid_ASM:
 @ 001101100
 @ 011000110
 @
-@ R0: x coordinate
-@ R1: y coordinate
+@ R0: x square ([0,2])
+@ R1: y square ([0,2])
 draw_X_ASM:
     BX LR
 
@@ -364,8 +364,8 @@ draw_X_ASM:
 @ 011000110
 @ 000111000
 @
-@ R0: x coordinate
-@ R1: y coordinate
+@ R0: x square ([0,2])
+@ R1: y square ([0,2])
 draw_O_ASM:
     BX LR
 
