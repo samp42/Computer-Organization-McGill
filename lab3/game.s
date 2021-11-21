@@ -28,6 +28,9 @@
 .equ RED,	0b1111100000000000
 .equ BLUE,	0b0000000000011111
 
+// grid
+.space GRID, 9 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1], [0,2], [1,2], [2,2]
+
 .text
 .global _start
 _start:
@@ -38,6 +41,9 @@ _start:
 	POP {LR}
 
     // game starts on '0' keyboard input
+	
+	// setup player turn
+	MOV R4, #0 // initially X player's turn
 
 	// enter game loop
 GAME_LOOP:
@@ -367,6 +373,12 @@ draw_O_ASM:
 @ R0: player (0 (X) / 1 (O))
 display_turn_ASM:
     BX LR
+
+
+@ checks wether the play is valid (square not filled)
+@ R0: keyboard input
+get_player_input_ASM:
+	BX LR
 
 
 @ R0: winner (0: player0 / 1: player1 / 2: draw)
