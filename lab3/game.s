@@ -28,8 +28,20 @@
 .equ RED,	0b1111100000000000
 .equ BLUE,	0b0000000000011111
 
+// characters
+.equ ZERO,	0x34
+.equ ONE,	0x16
+.equ TWO,	0x1E
+.equ THREE,	0x26
+.equ FOUR,	0x25
+.equ FIVE,	0x2E
+.equ SIX,	0x36
+.equ SEVEN,	0x3D
+.equ EIGHT,	0x3E
+.equ NINE, 	0x46
+
 // grid
-.space GRID, 9 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1], [0,2], [1,2], [2,2]
+GRID: .space 36 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1], [0,2], [1,2], [2,2]
 
 .text
 .global _start
@@ -63,10 +75,10 @@ GAME_OVER:
 // SUBROUTINES
 // ------------------------------------------------------------------------------------
 
-@ draws a point of specified color at specfied location
-@ R0: x coordinate
-@ R1: y coordinate
-@ R2: color
+// draws a point of specified color at specfied location
+// R0: x coordinate
+// R1: y coordinate
+// R2: color
 VGA_draw_point_ASM:
 	PUSH {R0-R1, R4-R5}
 	LDR R4, =PIX_BUFFER
@@ -88,7 +100,7 @@ SKIP_DRAW:
 	BX LR
 
 
-@ sets every pixel in pixel buffer to 0 (black screen)
+// sets every pixel in pixel buffer to 0 (black screen)
 VGA_clear_pixelbuff_ASM:
 	PUSH {R0-R2}
 	LDR R0, =PIX_BUFFER_WIDTH
@@ -114,10 +126,10 @@ PIX_BUFFER_CLEAR_END:
 	BX LR
 
 
-@ writes character to given location in character buffer
-@ R0: x coordinate
-@ R1: y coordinate
-@ R2: ASCII code of character
+// writes character to given location in character buffer
+// R0: x coordinate
+// R1: y coordinate
+// R2: ASCII code of character
 VGA_write_char_ASM:
 	PUSH {R0-R1, R4}
 	LDR R4, =CHAR_BUFFER
@@ -129,7 +141,7 @@ VGA_write_char_ASM:
 	BX LR
 
 
-@ sets every character in character buffer to 0
+// sets every character in character buffer to 0
 VGA_clear_charbuff_ASM:
 	PUSH {R0-R2}
 	LDR R0, =CHAR_BUFFER_WIDTH
@@ -154,9 +166,9 @@ CHAR_BUFFER_CLEAR_END:
 	BX LR
 
 
-@ stores PS/2 keyboard data at pointer argument if RVALID is valid (1)
-@ R0: pointer argument
-@ return R0: RVALID
+// stores PS/2 keyboard data at pointer argument if RVALID is valid (1)
+// R0: pointer argument
+// return R0: RVALID
 read_PS2_data_ASM:
 	PUSH {R4-R5}
 	
@@ -175,10 +187,10 @@ EXIT_PS_DATA:
 	BX LR
 
 
-@ R0: x coordinate
-@ R1: thickness (pixels)
-@ R2: color
-@ R3: padding
+// R0: x coordinate
+// R1: thickness (pixels)
+// R2: color
+// R3: padding
 draw_ver_line_ASM:
 	PUSH {R1, R4-R6}
 	MOV R4, R1
@@ -219,10 +231,10 @@ VER_LINE_END:
     BX LR
 
 
-@ R0: y coordinate
-@ R1: thickness (pixels)
-@ R2: color
-@ R3: padding
+// R0: y coordinate
+// R1: thickness (pixels)
+// R2: color
+// R3: padding
 draw_hor_line_ASM:
 	PUSH {R1, R4-R6}
 	MOV R4, R1
@@ -275,64 +287,50 @@ draw_grid_ASM:
 	// DRAW GRID (60x60 squares)
 
 	// draw vertical lines
-	MOV R0, #70
+	MOV R0, #56
 	MOV R1, #3
 	LDR R2, =GREEN
-	MOV R3, #10
+	MOV R3, #16
 
 	PUSH {LR}
 	BL draw_ver_line_ASM
 	POP {LR}
 	
-	MOV R0, #130
+	MOV R0, #125
 	PUSH {LR}
 	BL draw_ver_line_ASM
 	POP {LR}
 	
-	MOV R0, #190
+	MOV R0, #194
 	PUSH {LR}
 	BL draw_ver_line_ASM
 	POP {LR}
 	
-	MOV R0, #250
+	LDR R0, =#263
 	PUSH {LR}
 	BL draw_ver_line_ASM
 	POP {LR}
 	
 	// draw horizontal lines
-	MOV R0, #30
-	MOV R1, #38
-	LDR R2, =BLACK
-	MOV R3, #72
-	PUSH {LR}
-	BL draw_hor_line_ASM
-	POP {LR}
-	
-	
-	MOV R0, #10
+	MOV R0, #16
 	MOV R1, #3
 	LDR R2, =GREEN
-	MOV R3, #70
-	PUSH {LR}
-	BL draw_hor_line_ASM
-	POP {LR}
-	
-	MOV R0, #50
+	MOV R3, #56
 	PUSH {LR}
 	BL draw_hor_line_ASM
 	POP {LR}
 
-	MOV R0, #110
+	MOV R0, #85
 	PUSH {LR}
 	BL draw_hor_line_ASM
 	POP {LR}
 	
-	MOV R0, #170
+	MOV R0, #154
 	PUSH {LR}
 	BL draw_hor_line_ASM
 	POP {LR}
 	
-	MOV R0, #230
+	MOV R0, #223
 	PUSH {LR}
 	BL draw_hor_line_ASM
 	POP {LR}
@@ -342,46 +340,46 @@ draw_grid_ASM:
 	POP {R0-R1, R3}
 	BX LR
 
-@ pattern:
-@
-@ 011000110
-@ 001101100
-@ 000111000
-@ 001101100
-@ 011000110
-@
-@ R0: x square ([0,2])
-@ R1: y square ([0,2])
+// pattern:
+//
+// 011000110
+// 001101100
+// 000111000
+// 001101100
+// 011000110
+//
+// R0: x square ([0,2])
+// R1: y square ([0,2])
 draw_X_ASM:
     BX LR
 
 
-@ pattern:
-@
-@ 000111000
-@ 011000110
-@ 110000011
-@ 011000110
-@ 000111000
-@
-@ R0: x square ([0,2])
-@ R1: y square ([0,2])
+// pattern:
+//
+// 000111000
+// 011000110
+// 110000011
+// 011000110
+// 000111000
+//
+// R0: x square ([0,2])
+// R1: y square ([0,2])
 draw_O_ASM:
     BX LR
 
 
-@ R0: player (0 (X) / 1 (O))
+// R0: player (0 (X) / 1 (O))
 display_turn_ASM:
     BX LR
 
 
-@ checks wether the play is valid (square not filled)
-@ R0: keyboard input
+// checks wether the play is valid (square not filled)
+// R0: keyboard input
 get_player_input_ASM:
 	BX LR
 
 
-@ R0: winner (0: player0 / 1: player1 / 2: draw)
+// R0: winner (0: player0 / 1: player1 / 2: draw)
 display_result_ASM:
     BX LR
 
