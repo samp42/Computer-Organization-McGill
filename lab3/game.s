@@ -130,8 +130,10 @@ _start:
 
     // game starts on '0' keyboard input
 	
-	// setup player turn
+	// setup player turn (0: player0 / 1: player1)
 	MOV R4, #0 // initially X player's turn
+	// setup number of plays (to know if there is a draw
+	MOV R11, #1
 
 	// enter game loop
 GAME_LOOP:
@@ -518,18 +520,55 @@ display_turn_ASM:
 // checks wether the play is valid (square not filled)
 // R0: keyboard input
 get_player_input_ASM:
+	// 
 	BX LR
 
 
 // checks if there is a draw or if a player won
+// return
+// R0: result (0: nothing yet / 1: player0 won / 2: player 2 won / 3: draw)
 check_result_ASM:
+	PUSH {R4-R5}
+	LDR R4, =GRID
+	LDR R5, [R4]
+	
+	// check for horizontal line (3 consecutives similar plays) 
+	
+	// check for vertical line (3 similar plays at every +3 square)
+	
+	// check for left diagonal
+	
+	// check for right diagonal
+	
+	// check for draw
+	// have already checked if someone won, so if we reach this case and number of plays is 9,
+	// there is a draw
+	CMP R11, #9
+	MOVEQ R0, #3
+	
+	// have checked every case, none applies, the game is still on
+	MOVNE R0, #0
+	
+RETURN_RESULT:
+	POP {R4-R5}
 	BX LR
 
 // R0: winner (0: draw / 1: player0 / 2: player1)
 display_result_ASM:
     BX LR
+	
 
-
+// self-explanatory
+// input
+// R0: x1
+// R1: x2
+// return
+// R2: x1 % x2
+modulo_ASM:
+	
+	BX LR
+	
+	
 END:
     B END
 .end
