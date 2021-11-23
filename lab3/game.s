@@ -5,12 +5,8 @@
 .equ PIX_BUFFER_HEIGHT, 239		// y
 
 // grid positions [0,8] from left to right, top to bottom
-.equ X1, 100
-.equ X2, 160
-.equ X3, 220
-.equ Y1, 80
-.equ Y2, 140
-.equ Y3, 200
+X_COORD: .word 70, 139, 208
+Y_COORD: .word 66, 135, 204
 
 // character buffer
 .equ CHAR_BUFFER, 0xC9000000
@@ -22,11 +18,13 @@
 .equ PS2_CONTROL, 0xFF200104
 
 // colors
-.equ WHITE, 0b1111111111111111
-.equ BLACK, 0b0000000000000000
-.equ GREEN, 0b0000011111100000
-.equ RED,	0b1111100000000000
-.equ BLUE,	0b0000000000011111
+.equ WHITE, 	0b1111111111111111
+.equ BLACK, 	0b0000000000000000
+.equ GREEN, 	0b0000011111100000
+.equ RED,		0b1111100000000000
+.equ BLUE,		0b0000000000011111
+.equ PURPLE,	0b1111100000011111
+.equ YELLOW,	0b0000011111111111
 
 // characters
 .equ ZERO,	0x34
@@ -40,6 +38,12 @@
 .equ EIGHT,	0x3E
 .equ NINE, 	0x46
 
+// X mark
+X_ROWS: .hword 0b011000110, 0b001101100, 0b000111000, 0b001101100, 0b011000110
+
+// O mark
+O_ROWS: .hword 0b000111000, 0b011000110, 0b110000011, 0b011000110, 0b000111000
+
 // grid
 GRID: .space 36 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1], [0,2], [1,2], [2,2]
 
@@ -50,6 +54,10 @@ _start:
 	// draw grid
 	PUSH {LR}
 	BL draw_grid_ASM
+	POP {LR}
+	
+	PUSH {LR}
+	BL draw_X_ASM
 	POP {LR}
 
     // game starts on '0' keyboard input
@@ -291,7 +299,6 @@ draw_grid_ASM:
 	MOV R1, #3
 	LDR R2, =GREEN
 	MOV R3, #16
-
 	PUSH {LR}
 	BL draw_ver_line_ASM
 	POP {LR}
@@ -339,36 +346,109 @@ draw_grid_ASM:
 	
 	POP {R0-R1, R3}
 	BX LR
+	
+	
+// validate move
+// if valid (case not already used), records the move
+// input
+// R0: position [0,8]
+// R1: move (1: player0 / 2: player1)
+// return
+// R0: 0/1 no/yes
+validate_move_ASM:
+	PUSH {R4-R6}
+	LDR R4, =GRID
+	MOV R5, #4
+	MLA R6, R0, R5, R4
+	LDR R4, [R6]
+	
+	// record move if no previous move at that square
+	TEQ R4, #0
+	STREQ R0, [R6]
+	
+	POP {R4-R6}
+	BX LR
 
 // pattern:
-//
+// 9x5
 // 011000110
 // 001101100
 // 000111000
 // 001101100
 // 011000110
 //
-// R0: x square ([0,2])
-// R1: y square ([0,2])
+// R0: x position [0,2]
+// R1: y position [0,2]
+// R2: color
 draw_X_ASM:
+	PUSH {R4-R11}
+	// x
+	LDR R5, =X_COORD
+	MOV R6, #4
+	MLA R4, R0, R6, R5
+	LDR R4, [R4]
+	ADD R0, R4, #4
+	
+	// y
+	ADD R5, #12 // y coordinates 3 words further in memory
+	MLA R5, R1, R6, R5
+	LDR R5, [R5]
+	ADD R1, R5, #2
+	MOV R6, R1 // save for later, because need to reset
+	
+	MOV R7, #8 // width (columns - 1)
+	MOV R8, #4 // height (rows - 1)
+	LDR R9, =X_ROWS
+	LDR R10, [R9]
+	
+// loop through filter and write pixel if 1
+X_LOOP:
+	ANDS R11, R10, #0b1 // take last bit and determine if need to write or not
+	
+	BEQ SKIP_X_WRITE
+	
+	PUSH {LR}
+	BL VGA_draw_point_ASM
+	POP {LR}
+	
+SKIP_X_WRITE:
+	SUBS R7, #1 // j--
+	SUB R1, #1
+	LSR R10, #1
+	BGE X_LOOP
+	
+	// loop logic
+	SUBS R8, #1 // i--
+	BLT RETURN_X
+	SUB R0, #1
+	
+	ADD R9, #2 // next row of character
+	LDR R10, [R9]
+	B X_LOOP
+
+RETURN_X:
+	POP {R4-R11}
     BX LR
 
 
 // pattern:
-//
+// 9x5
 // 000111000
 // 011000110
 // 110000011
 // 011000110
 // 000111000
 //
-// R0: x square ([0,2])
-// R1: y square ([0,2])
+// R0: x position [0,2]
+// R1: y position [0,2]
+// R2: color
 draw_O_ASM:
+
+RETURN_O:
     BX LR
 
 
-// R0: player (0 (X) / 1 (O))
+// R0: player (1 (X) / 2 (O))
 display_turn_ASM:
     BX LR
 
@@ -379,7 +459,7 @@ get_player_input_ASM:
 	BX LR
 
 
-// R0: winner (0: player0 / 1: player1 / 2: draw)
+// R0: winner (0: draw / 1: player0 / 2: player1)
 display_result_ASM:
     BX LR
 
