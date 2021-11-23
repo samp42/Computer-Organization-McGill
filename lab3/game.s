@@ -39,10 +39,10 @@ Y_COORD: .word 66, 135, 204
 .equ NINE, 	0x46
 
 // X mark
-X_ROWS: .hword 0b011000110, 0b001101100, 0b000111000, 0b001101100, 0b011000110
+X_ROWS: .word 0b011000110, 0b001101100, 0b000111000, 0b001101100, 0b011000110
 
 // O mark
-O_ROWS: .hword 0b000111000, 0b011000110, 0b110000011, 0b011000110, 0b000111000
+O_ROWS: .word 0b000111000, 0b011000110, 0b110000011, 0b011000110, 0b000111000
 
 // grid
 GRID: .space 36 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1], [0,2], [1,2], [2,2]
@@ -56,8 +56,14 @@ _start:
 	BL draw_grid_ASM
 	POP {LR}
 	
+	// write '0' at (70, 66)
+	MOV R0, #20
+	MOV R1, #20
+	MOV R2, #1
+	
 	PUSH {LR}
-	BL draw_X_ASM
+	// BL draw_X_ASM
+	BL VGA_write_char_ASM
 	POP {LR}
 
     // game starts on '0' keyboard input
@@ -351,7 +357,7 @@ draw_grid_ASM:
 // validate move
 // if valid (case not already used), records the move
 // input
-// R0: position [0,8]
+// R0: position [1,9]
 // R1: move (1: player0 / 2: player1)
 // return
 // R0: 0/1 no/yes
@@ -359,7 +365,9 @@ validate_move_ASM:
 	PUSH {R4-R6}
 	LDR R4, =GRID
 	MOV R5, #4
-	MLA R6, R0, R5, R4
+	// use 0-8 instead of 1-9 to fetch list of moves
+	SUB R6, R0, #1
+	MLA R6, R6, R5, R4
 	LDR R4, [R6]
 	
 	// record move if no previous move at that square
@@ -412,9 +420,9 @@ X_LOOP:
 	POP {LR}
 	
 SKIP_X_WRITE:
-	SUBS R7, #1 // j--
 	SUB R1, #1
 	LSR R10, #1
+	SUBS R7, #1 // j--
 	BGE X_LOOP
 	
 	// loop logic
@@ -422,7 +430,7 @@ SKIP_X_WRITE:
 	BLT RETURN_X
 	SUB R0, #1
 	
-	ADD R9, #2 // next row of character
+	ADD R9, #4 // next row of character
 	LDR R10, [R9]
 	B X_LOOP
 
