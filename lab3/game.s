@@ -120,12 +120,12 @@ _start:
 	POP {LR}
 	
 	// write '0' at (70, 66)
-	MOV R0, #2
-	MOV R1, #2
-	LDR R2, =PINK
-	
+	MOV R0, #1
+	MOV R1, #1
+	LDR R2, =YELLOW
+	LDR R3, =X_ROWS
 	PUSH {LR}
-	BL draw_X_ASM
+	BL draw_char_ASM
 	POP {LR}
 
     // game starts on '0' keyboard input
@@ -443,7 +443,8 @@ validate_move_ASM:
 // R0: x position [0,2]
 // R1: y position [0,2]
 // R2: color
-draw_X_ASM:
+// R3: X_ROWS / O_ROWS depending on desired character
+draw_char_ASM:
 	PUSH {R4-R10}
 	// x
 	LDR R5, =X_COORD
@@ -471,24 +472,24 @@ draw_X_ASM:
 	
 	MOV R7, #30 // width (columns - 1)
 	MOV R8, #30 // height (rows - 1)
-	LDR R9, =X_ROWS
+	MOV R9, R3
 	LDR R10, [R9]
 	
 // loop through filter and write pixel if 1
-X_LOOP:
+CHAR_LOOP:
 	TST R10, #0b1 // take last bit and determine if need to write or not
 	
-	BEQ SKIP_X_WRITE
+	BEQ SKIP_CHAR_WRITE
 	
 	PUSH {LR}
 	BL VGA_draw_point_ASM
 	POP {LR}
 	
-SKIP_X_WRITE:
+SKIP_CHAR_WRITE:
 	SUB R1, #1
 	LSR R10, #1
 	SUBS R7, #1 // j--
-	BGE X_LOOP
+	BGE CHAR_LOOP
 	// reset j
 	MOV R7, #30
 	MOV R1, R6
@@ -497,24 +498,15 @@ SKIP_X_WRITE:
 	
 	// loop logic
 	SUBS R8, #1 // i--
-	BLT RETURN_X
+	BLT RETURN_CHAR
 	SUB R0, #1
 	
 	ADD R9, #4 // next row of character
 	LDR R10, [R9]
-	B X_LOOP
+	B CHAR_LOOP
 
-RETURN_X:
+RETURN_CHAR:
 	POP {R4-R10}
-    BX LR
-
-
-// R0: x position [0,2]
-// R1: y position [0,2]
-// R2: color
-draw_O_ASM:
-
-RETURN_O:
     BX LR
 
 
