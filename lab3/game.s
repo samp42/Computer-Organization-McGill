@@ -132,7 +132,8 @@ _start:
 	
 	// setup player turn (0: player0 / 1: player1)
 	MOV R4, #0 // initially X player's turn
-	// setup number of plays (to know if there is a draw
+	// setup number of plays (to know if there is a draw)
+	// also avoids checking for a result before move 5
 	MOV R11, #1
 
 	// enter game loop
