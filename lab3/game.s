@@ -44,7 +44,7 @@ Y_COORD: .word 66, 135, 204
 // "Please press 0 to start"
 // 23 characters, 4 spaces
 .equ START_MESSAGE_LENGTH, 23
-.equ START_MESSAGE_X, ????
+.equ START_MESSAGE_X, 10
 START_MESSAGE:
 	.byte 0x50
 	.byte 0x6C
@@ -73,7 +73,7 @@ START_MESSAGE:
 // "PLAYER 0 WINS!"
 // 14 characters, 2 spaces
 .equ WINNING_MESSAGE_LENGTH, 14
-.equ WINNING_MESSAGE_X, ????
+.equ WINNING_MESSAGE_X, 10
 WINNING_MESSAGE_0:
 	.byte 0x50
 	.byte 0x4C
@@ -110,7 +110,7 @@ WINNING_MESSAGE_1:
 // "Draw... :("
 // 10 characters, 1 space
 .equ START_MESSAGE_LENGTH, 10
-.equ DRAW_MESSAGE_X, ????
+.equ DRAW_MESSAGE_X, 10
 DRAW_MESSAGE:
 	.byte 0x44
 	.byte 0x72
@@ -438,6 +438,11 @@ _start:
 	PUSH {LR}
 	BL draw_mark_ASM
 	POP {LR}
+	
+	
+	PUSH {LR}
+	BL write_string_ASM
+	POP {LR}
 
     // game starts on '0' keyboard input
 	
@@ -537,9 +542,17 @@ VGA_write_char_ASM:
 // R2: message address
 // R3: message length
 write_string_ASM:
-	PUSH {}
+	PUSH {R4}
 	
-	POP {}
+	MOV R0, #3
+	MOV R1, #2
+	MOV R2, #45
+	
+	PUSH {LR}
+	BL VGA_write_char_ASM
+	POP {LR}
+	// for(0...message length) { print character, x++}
+	POP {R4}
 	BX LR
 
 // sets every character in character buffer to 0
@@ -742,7 +755,7 @@ draw_grid_ASM:
 	
 	
 // validate move
-// if valid (case not already used), records the move
+// if valid (square not already used), records the move
 // input
 // R0: position [1,9]
 // R1: move (1: player0 / 2: player1)
