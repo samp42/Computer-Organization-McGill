@@ -40,6 +40,89 @@ Y_COORD: .word 66, 135, 204
 .equ EIGHT,	0x3E
 .equ NINE, 	0x46
 
+// strings
+// "Please press 0 to start"
+// 23 characters, 4 spaces
+.equ START_MESSAGE_LENGTH, 23
+.equ START_MESSAGE_X, ????
+START_MESSAGE:
+	.byte 0x50
+	.byte 0x6C
+	.byte 0x65
+	.byte 0x61
+	.byte 0x73
+	.byte 0x65
+	.byte 0x20
+	.byte 0x70
+	.byte 0x72
+	.byte 0x65
+	.byte 0x73
+	.byte 0x73
+	.byte 0x20
+	.byte 0x30
+	.byte 0x20
+	.byte 0x74
+	.byte 0x6F
+	.byte 0x20
+	.byte 0x73
+	.byte 0x74
+	.byte 0x61
+	.byte 0x72
+	.byte 0x74
+	
+// "PLAYER 0 WINS!"
+// 14 characters, 2 spaces
+.equ WINNING_MESSAGE_LENGTH, 14
+.equ WINNING_MESSAGE_X, ????
+WINNING_MESSAGE_0:
+	.byte 0x50
+	.byte 0x4C
+	.byte 0x41
+	.byte 0x59
+	.byte 0x45
+	.byte 0x52
+	.byte 0x20
+	.byte 0x30 // 0
+	.byte 0x20
+	.byte 0x57
+	.byte 0x49
+	.byte 0x4E
+	.byte 0x53
+	.byte 0x21
+	
+// "PLAYER 1 WINS!"
+WINNING_MESSAGE_1:
+	.byte 0x50
+	.byte 0x4C
+	.byte 0x41
+	.byte 0x59
+	.byte 0x45
+	.byte 0x52
+	.byte 0x20
+	.byte 0x31 // 1
+	.byte 0x20
+	.byte 0x57
+	.byte 0x49
+	.byte 0x4E
+	.byte 0x53
+	.byte 0x21
+	
+// "Draw... :("
+// 10 characters, 1 space
+.equ START_MESSAGE_LENGTH, 10
+.equ DRAW_MESSAGE_X, ????
+DRAW_MESSAGE:
+	.byte 0x44
+	.byte 0x72
+	.byte 0x61
+	.byte 0x77
+	.byte 0x2E
+	.byte 0x2E
+	.byte 0x2E
+	.byte 0x20
+	.byte 0x3A
+	.byte 0x28
+
 // X mark
 X_ROWS:
 	.word 0b0000000000000111110000000000000
@@ -308,6 +391,14 @@ _start:
 	BL draw_mark_ASM
 	POP {LR}
 	
+	MOV R0, #1
+	MOV R1, #0
+	LDR R2, =ORANGE
+	LDR R3, =BITCOIN_ROWS
+	PUSH {LR}
+	BL draw_mark_ASM
+	POP {LR}
+	
 	MOV R0, #2
 	MOV R1, #0
 	LDR R2, =GREEN
@@ -439,7 +530,17 @@ VGA_write_char_ASM:
 	STRB R2, [R0]
 	POP {R0-R1, R4}
 	BX LR
+	
 
+// writes a message with given length at specified x coordinate (y is hardcoded)
+// R0: x coordinate
+// R2: message address
+// R3: message length
+write_string_ASM:
+	PUSH {}
+	
+	POP {}
+	BX LR
 
 // sets every character in character buffer to 0
 VGA_clear_charbuff_ASM:
@@ -684,7 +785,7 @@ draw_mark_ASM:
 	ADD R0, R4, #36 // start at edge of character
 	
 	// y
-	ADD R5, #12 // y coordinates 3 words further in memory, save a LDR
+	ADD R5, #12 // y coordinates 3 words further in memory, saves a LDR
 	MLA R5, R1, R6, R5
 	LDR R5, [R5]
 	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
