@@ -791,7 +791,7 @@ display_result_ASM:
 // R0: x1
 // R1: x2
 // return
-// R2: x1 % x2
+// R0: x1 % x2
 modulo_ASM:
 	CMP R0, R1
 	// if R0 == R1, modulo is 0
