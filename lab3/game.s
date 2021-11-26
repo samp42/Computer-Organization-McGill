@@ -116,13 +116,13 @@ CIRCLE_ROWS:
 	.word 0b0000000011111000001111100000000
 	.word 0b0000000111110000000111110000000
 	.word 0b0000001111100000000011111000000
-	.word 0b0001111100000000000000011111000
+	.word 0b0000111110000000000000111110000
 	.word 0b0001111100000000000000011111000
 	.word 0b0011111000000000000000001111100
-	.word 0b0011111000000000000000001111100
+	.word 0b0011110000000000000000000111100
 	.word 0b0111110000000000000000000111110
-	.word 0b0111110000000000000000000111110
-	.word 0b0111110000000000000000000111110
+	.word 0b0111100000000000000000000011110
+	.word 0b0111100000000000000000000011110
 	.word 0b1111100000000000000000000011111
 	.word 0b1111000000000000000000000001111
 	.word 0b1111000000000000000000000001111
@@ -245,10 +245,51 @@ STONKS_ROWS:
 	.word 0b1111111111111111111111111111111
 
 
+// BITCOIN mark
+BITCOIN_ROWS:
+	.word 0b0000000011100111000000000000000
+	.word 0b0000000011100111000000000000000
+	.word 0b0000000011100111000000000000000
+	.word 0b0000000011100111000000000000000
+	.word 0b0000011111111111111000000000000
+	.word 0b0000011111111111111100000000000
+	.word 0b0000011111111111111110000000000
+	.word 0b0000011100000000011110000000000
+	.word 0b0000011100000000001111000000000
+	.word 0b0000011100000000000111100000000
+	.word 0b0000011100000000000011100000000
+	.word 0b0000011100000000000011100000000
+	.word 0b0000011100000000000111000000000
+	.word 0b0000011100000000011111000000000
+	.word 0b0000011111111111111110000000000
+	.word 0b0000011111111111111100000000000
+	.word 0b0000011111111111111110000000000
+	.word 0b0000011100000000011111000000000
+	.word 0b0000011100000000000111000000000
+	.word 0b0000011100000000000011100000000
+	.word 0b0000011100000000000011100000000
+	.word 0b0000011100000000000111100000000
+	.word 0b0000011100000000001111000000000
+	.word 0b0000011100000000011111000000000
+	.word 0b0000011111111111111110000000000
+	.word 0b0000011111111111111100000000000
+	.word 0b0000011111111111111000000000000
+	.word 0b0000000011100111000000000000000
+	.word 0b0000000011100111000000000000000
+	.word 0b0000000011100111000000000000000
+	.word 0b0000000011100111000000000000000
+
+
+
 
 // grid
 GRID: .space 36 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1], [0,2], [1,2], [2,2]
 
+// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// ------------------------ PROGRAM START ------------------------------
+// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
 .text
 .global _start
 _start:
@@ -314,6 +355,7 @@ _start:
 	// setup number of plays (to know if there is a draw)
 	// also avoids checking for a result before move 5
 	MOV R11, #1
+
 
 	// enter game loop
 GAME_LOOP:
@@ -639,7 +681,7 @@ draw_mark_ASM:
 	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
 	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
 	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
-	ADD R0, R4, #35 // start at edge of character
+	ADD R0, R4, #36 // start at edge of character
 	
 	// y
 	ADD R5, #12 // y coordinates 3 words further in memory, save a LDR
@@ -653,8 +695,8 @@ draw_mark_ASM:
 	ADD R1, R5, #0 // start at edge of character
 	MOV R6, R1 // save for later, because need to reset
 	
-	MOV R7, #30 // width (columns - 1)
-	MOV R8, #30 // height (rows - 1)
+	MOV R7, #30 // width (columns - 1), aka x
+	MOV R8, #30 // height (rows - 1), aka y
 	MOV R9, R3
 	LDR R10, [R9]
 	
@@ -671,16 +713,16 @@ CHAR_LOOP:
 SKIP_CHAR_WRITE:
 	SUB R1, #1
 	LSR R10, #1
-	SUBS R7, #1 // j--
+	SUBS R7, #1 // y--
 	BGE CHAR_LOOP
-	// reset j
+	// reset y
 	MOV R7, #30
 	MOV R1, R6
 	// go to next row of pixels
 	
 	
 	// loop logic
-	SUBS R8, #1 // i--
+	SUBS R8, #1 // x--
 	BLT RETURN_CHAR
 	SUB R0, #1
 	
@@ -713,13 +755,18 @@ check_result_ASM:
 	LDR R4, =GRID
 	LDR R5, [R4]
 	
-	// check for horizontal line (3 consecutives similar plays) 
+	// check for horizontal line (3 consecutives similar plays)
+	// [0,0] == [1,0] == [2,0] || [0,1] == [1,1] == [2,1] || [0,2] == [1,2] == [2,2]
 	
 	// check for vertical line (3 similar plays at every +3 square)
+	// [0,0] == [0,1] == [0,2] || [1,0] == [1,1] == [1,2] || [2,0] == [2,1] == [2,2]
 	
 	// check for left diagonal
+	// [0,0] == [1,1] == [2,2]
+	
 	
 	// check for right diagonal
+	// [2,0] == [1,1] == [0,2]
 	
 	// check for draw
 	// have already checked if someone won, so if we reach this case and number of plays is 9,
@@ -746,7 +793,19 @@ display_result_ASM:
 // return
 // R2: x1 % x2
 modulo_ASM:
+	CMP R0, R1
+	// if R0 == R1, modulo is 0
+	// if R0 < R1, modulo is R0
+	MOVEQ R0, #0
+	BLE RETURN_MODULO
 	
+	// else (if R0 > R1), R0 = R0 - R1
+	SUB R0, R1
+	PUSH {LR}
+	BL modulo_ASM
+	POP {LR}
+	
+RETURN_MODULO:
 	BX LR
 	
 	
