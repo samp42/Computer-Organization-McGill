@@ -1,3 +1,4 @@
+.data
 // pixel buffer
 .equ PIX_BUFFER, 0xC8000000
 .equ PIX_BUFFER_END, 0xC803BE7E
@@ -24,21 +25,22 @@ Y_COORD: .word 66, 135, 204
 .equ RED,		0b1111100000000000
 .equ BLUE,		0b0000000000011111
 .equ PURPLE,	0b1100000000011111
-.equ PINK,		0b1111100000011100
+.equ PINK,		0b1111100000010110
 .equ YELLOW,	0b1111111111100000
 .equ ORANGE,	0b1111110011000000
 
 // characters
-.equ ZERO,	0x34
-.equ ONE,	0x16
-.equ TWO,	0x1E
-.equ THREE,	0x26
-.equ FOUR,	0x25
-.equ FIVE,	0x2E
-.equ SIX,	0x36
-.equ SEVEN,	0x3D
-.equ EIGHT,	0x3E
-.equ NINE, 	0x46
+NUMBERS:
+	.word 0x34
+	.word 0x16
+	.word 0x1E
+	.word 0x26
+	.word 0x25
+	.word 0x2E
+	.word 0x36
+	.word 0x3D
+	.word 0x3E
+	.word 0x46
 
 // strings
 // "Please press 0 to start"
@@ -46,82 +48,82 @@ Y_COORD: .word 66, 135, 204
 .equ START_MESSAGE_LENGTH, 23
 .equ START_MESSAGE_X, 10
 START_MESSAGE:
-	.byte 0x50
-	.byte 0x6C
-	.byte 0x65
-	.byte 0x61
-	.byte 0x73
-	.byte 0x65
-	.byte 0x20
-	.byte 0x70
-	.byte 0x72
-	.byte 0x65
-	.byte 0x73
-	.byte 0x73
-	.byte 0x20
-	.byte 0x30
-	.byte 0x20
-	.byte 0x74
-	.byte 0x6F
-	.byte 0x20
-	.byte 0x73
-	.byte 0x74
-	.byte 0x61
-	.byte 0x72
-	.byte 0x74
+	.word 0x50
+	.word 0x6C
+	.word 0x65
+	.word 0x61
+	.word 0x73
+	.word 0x65
+	.word 0x20
+	.word 0x70
+	.word 0x72
+	.word 0x65
+	.word 0x73
+	.word 0x73
+	.word 0x20
+	.word 0x30
+	.word 0x20
+	.word 0x74
+	.word 0x6F
+	.word 0x20
+	.word 0x73
+	.word 0x74
+	.word 0x61
+	.word 0x72
+	.word 0x74
 	
 // "PLAYER 0 WINS!"
 // 14 characters, 2 spaces
 .equ WINNING_MESSAGE_LENGTH, 14
 .equ WINNING_MESSAGE_X, 10
 WINNING_MESSAGE_0:
-	.byte 0x50
-	.byte 0x4C
-	.byte 0x41
-	.byte 0x59
-	.byte 0x45
-	.byte 0x52
-	.byte 0x20
-	.byte 0x30 // 0
-	.byte 0x20
-	.byte 0x57
-	.byte 0x49
-	.byte 0x4E
-	.byte 0x53
-	.byte 0x21
+	.word 0x50
+	.word 0x4C
+	.word 0x41
+	.word 0x59
+	.word 0x45
+	.word 0x52
+	.word 0x20
+	.word 0x30 // 0
+	.word 0x20
+	.word 0x57
+	.word 0x49
+	.word 0x4E
+	.word 0x53
+	.word 0x21
 	
 // "PLAYER 1 WINS!"
 WINNING_MESSAGE_1:
-	.byte 0x50
-	.byte 0x4C
-	.byte 0x41
-	.byte 0x59
-	.byte 0x45
-	.byte 0x52
-	.byte 0x20
-	.byte 0x31 // 1
-	.byte 0x20
-	.byte 0x57
-	.byte 0x49
-	.byte 0x4E
-	.byte 0x53
-	.byte 0x21
+	.word 0x50
+	.word 0x4C
+	.word 0x41
+	.word 0x59
+	.word 0x45
+	.word 0x52
+	.word 0x20
+	.word 0x31 // 1
+	.word 0x20
+	.word 0x57
+	.word 0x49
+	.word 0x4E
+	.word 0x53
+	.word 0x21
 	
 // "Draw... :("
 // 10 characters, 1 space
-.equ START_MESSAGE_LENGTH, 10
+.equ DRAW_MESSAGE_LENGTH, 10
 .equ DRAW_MESSAGE_X, 10
 DRAW_MESSAGE:
-	.byte 0x44
-	.byte 0x72
-	.byte 0x61
-	.byte 0x77
-	.byte 0x2E
-	.byte 0x2E
-	.byte 0x2E
-	.byte 0x20
-	.byte 0x3A
-	.byte 0x28
+	.word 0x44
+	.word 0x72
+	.word 0x61
+	.word 0x77
+	.word 0x2E
+	.word 0x2E
+	.word 0x2E
+	.word 0x20
+	.word 0x3A
+	.word 0x28
 
 // X mark
 X_ROWS:
@@ -385,7 +387,7 @@ _start:
 	// write '0' at (70, 66)
 	MOV R0, #0
 	MOV R1, #0
-	LDR R2, =YELLOW
+	LDR R2, =PURPLE
 	LDR R3, =SPACE_ROWS
 	PUSH {LR}
 	BL draw_mark_ASM
@@ -433,13 +435,15 @@ _start:
 	
 	MOV R0, #0
 	MOV R1, #2
-	LDR R2, =ORANGE
+	LDR R2, =YELLOW
 	LDR R3, =CIRCLE_ROWS
 	PUSH {LR}
 	BL draw_mark_ASM
 	POP {LR}
 	
-	
+	MOV R0, #8
+	LDR R1, =DRAW_MESSAGE
+	LDR R3, =DRAW_MESSAGE_LENGTH
 	PUSH {LR}
 	BL write_string_ASM
 	POP {LR}
@@ -455,6 +459,18 @@ _start:
 
 	// enter game loop
 GAME_LOOP:
+	PUSH {LR}
+	BL get_player_input_ASM
+	POP {LR}
+	
+	MOV R2, R0
+	MOV R0, #8
+	MOV R1, #1
+	
+	PUSH {LR}
+	BL VGA_write_char_ASM
+	POP {LR}
+
     // write whose turn it is at top-center
 
     // wait for player input and display it (X / O)
@@ -522,39 +538,6 @@ PIX_BUFFER_CLEAR_END:
 	BX LR
 
 
-// writes character to given location in character buffer
-// R0: x coordinate
-// R1: y coordinate
-// R2: ASCII code of character
-VGA_write_char_ASM:
-	PUSH {R0-R1, R4}
-	LDR R4, =CHAR_BUFFER
-	LSL R1, #7
-	ADD R0, R1
-	ADD R0, R4
-	STRB R2, [R0]
-	POP {R0-R1, R4}
-	BX LR
-	
-
-// writes a message with given length at specified x coordinate (y is hardcoded)
-// R0: x coordinate
-// R2: message address
-// R3: message length
-write_string_ASM:
-	PUSH {R4}
-	
-	MOV R0, #3
-	MOV R1, #2
-	MOV R2, #45
-	
-	PUSH {LR}
-	BL VGA_write_char_ASM
-	POP {LR}
-	// for(0...message length) { print character, x++}
-	POP {R4}
-	BX LR
-
 // sets every character in character buffer to 0
 VGA_clear_charbuff_ASM:
 	PUSH {R0-R2}
@@ -578,26 +561,75 @@ CHAR_BUFFER_CLEAR_LOOP:
 CHAR_BUFFER_CLEAR_END:
 	POP {R0-R2}
 	BX LR
+	
+	
+// writes character to given location in character buffer
+// R0: x coordinate
+// R1: y coordinate
+// R2: ASCII code of character
+VGA_write_char_ASM:
+	PUSH {R0-R1, R4}
+	LDR R4, =CHAR_BUFFER
+	LSL R1, #7
+	ADD R0, R1
+	ADD R0, R4
+	STRB R2, [R0]
+	POP {R0-R1, R4}
+	BX LR
+	
+
+// writes a message with given length at specified x coordinate (y is hardcoded)
+// R0: x coordinate
+// R1: message address
+// R3: message length
+write_string_ASM:
+	PUSH {R4}
+	
+	MOV R4, R1
+	MOV R1, #1 // hardcoded y
+	
+	PUSH {LR}
+	BL VGA_clear_charbuff_ASM
+	POP {LR}
+	
+	// for(0...message length) { print character, x++}
+WRITE_STRING_LOOP:
+	LDR R2, [R4]
+	ADD R4, #4
+	
+	PUSH {LR}
+	BL VGA_write_char_ASM
+	POP {LR}
+	
+	ADD R0, #1
+	SUBS R3, #1
+	BGE WRITE_STRING_LOOP
+	
+	POP {R4}
+	BX LR
 
 
+// MODIFIED FROM PS2.S !!!!
 // stores PS/2 keyboard data at pointer argument if RVALID is valid (1)
 // R0: pointer argument
-// return R0: RVALID
+// return
+// R0: RVALID
+// R1: DATA
 read_PS2_data_ASM:
-	PUSH {R4-R5}
+	PUSH {R5}
 	
-	LDR R4, =PS2_DATA
-	LDR R4, [R4]
-	AND R5, R4, #0x8000 // isolate RVALID bit
+	LDR R1, =PS2_DATA
+	LDR R1, [R1]
+	AND R5, R1, #0x8000 // isolate RVALID bit
 	LSR R5, #15
 	TEQ R5, #1
 	BNE EXIT_PS_DATA
-	AND R4, #0xff	// isolate last 8 bits (data bits)
-	STRB R4, [R0]
+	AND R1, #0xff	// isolate last 8 bits (data bits)
+	STRB R1, [R0]
 	
 EXIT_PS_DATA:
 	MOV R0, R5
-	POP {R4-R5}
+	POP {R5}
 	BX LR
 
 
@@ -815,20 +847,20 @@ draw_mark_ASM:
 	LDR R10, [R9]
 	
 // loop through filter and write pixel if 1
-CHAR_LOOP:
+MARK_LOOP:
 	TST R10, #0b1 // take last bit and determine if need to write or not
 	
-	BEQ SKIP_CHAR_WRITE
+	BEQ SKIP_MARK_WRITE
 	
 	PUSH {LR}
 	BL VGA_draw_point_ASM
 	POP {LR}
 	
-SKIP_CHAR_WRITE:
+SKIP_MARK_WRITE:
 	SUB R1, #1
 	LSR R10, #1
 	SUBS R7, #1 // y--
-	BGE CHAR_LOOP
+	BGE MARK_LOOP
 	// reset y
 	MOV R7, #30
 	MOV R1, R6
@@ -837,14 +869,14 @@ SKIP_CHAR_WRITE:
 	
 	// loop logic
 	SUBS R8, #1 // x--
-	BLT RETURN_CHAR
+	BLT RETURN_MARK
 	SUB R0, #1
 	
 	ADD R9, #4 // next row of character
 	LDR R10, [R9]
-	B CHAR_LOOP
+	B MARK_LOOP
 
-RETURN_CHAR:
+RETURN_MARK:
 	POP {R4-R10}
     BX LR
 
@@ -855,9 +887,53 @@ display_turn_ASM:
 
 
 // checks wether the play is valid (square not filled)
+// also receives '0' when ready to start
+// input
 // R0: keyboard input
+// return
+// R0: number [0,9]
+// R1: write (0/1), wether it is actually an input
 get_player_input_ASM:
-	// 
+	PUSH {R4-R5}
+	
+	LDR R4, =NUMBERS
+	MOV R0, #10 // invalid character
+	
+	PUSH {LR}
+	BL read_PS2_data_ASM
+	POP {LR}
+	
+	CMP R0, #1
+	// player input not valid somehow
+	BNE RETURN_WO_PLAYER_INPUT
+	
+	CMP R1, #0x45
+	
+	// else check what character it is
+	MOV R0, #0
+	
+	// workaround for '0'
+	BEQ RETURN_WO_PLAYER_INPUT
+	
+NUM_VERIF_LOOP:
+	LDR R5, [R4], #4 // R5 = *[R4++]
+	
+	// test every input 1 by 1... :(
+	CMP R1, R5
+	BEQ RETURN_WO_PLAYER_INPUT
+	ADD R0, #1
+	
+	CMP R0, #10
+	BGE STEP_OUT_LOOP
+	
+	B NUM_VERIF_LOOP
+
+// avoid infinite loop (i.e.: didn't find a character between [0,9]
+STEP_OUT_LOOP:
+	MOV R0, #10
+	
+RETURN_WO_PLAYER_INPUT:
+	POP {R4-R5}
 	BX LR
 
 
