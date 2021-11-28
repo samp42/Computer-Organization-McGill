@@ -505,7 +505,6 @@ PLAYER_INPUT_LOOP:
 	BL get_move_coordinates_ASM
 	POP {LR}
 	
-	
 	// display move
 	CMP R4, #0
 	MOVEQ R2, R5
@@ -1042,6 +1041,7 @@ get_move_coordinates_ASM:
 	MOV R4, R0
 	
 	// y = move / 3
+	MOV R1, #3
 	PUSH {LR}
 	BL divide_ASM
 	POP {LR}
