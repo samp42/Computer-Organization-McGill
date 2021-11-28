@@ -421,10 +421,20 @@ GRID: .space 36 // bytes for 9 squares: [0,0], [1,0], [2,0], [0,1], [1,1], [2,1]
 .text
 .global _start
 _start:
+
+	// clear char buffer
+	PUSH {LR}
+	BL VGA_clear_charbuff_ASM
+	POP {LR}
 	
 	// draw grid
 	PUSH {LR}
 	BL draw_grid_ASM
+	POP {LR}
+	
+	MOV R0, #3
+	PUSH {LR}
+	BL get_move_coordinates_ASM
 	POP {LR}
 
     // game starts on '0' keyboard input
@@ -1028,7 +1038,8 @@ RETURN_RESULT:
 // R1: y [0,2]
 get_move_coordinates_ASM:
 	PUSH {R4-R5}
-	SUB R4, R0, #1
+	SUB R0, #1
+	MOV R4, R0
 	
 	// y = move / 3
 	PUSH {LR}
@@ -1036,6 +1047,7 @@ get_move_coordinates_ASM:
 	POP {LR}
 	
 	MOV R5, R0
+	MOV R0, R4
 	
 	// x = move % 3
 	PUSH {LR}
@@ -1083,10 +1095,12 @@ divide_ASM:
 	MOV R4, #0
 
 DIVIDE_LOOP:
-	SUBS R0, R1
+	CMP R0, R1
+	SUBGE R0, R1
 	ADDGE R4, #1
 	BGE DIVIDE_LOOP
 	
+	MOV R0, R4
 	POP {R4}
 	BX LR
 	
