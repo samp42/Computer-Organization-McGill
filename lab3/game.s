@@ -72,6 +72,49 @@ START_MESSAGE:
 	.word 0x72
 	.word 0x74
 	
+// "Player 0's turn"
+// 15 characters, 2 spaces
+.equ PLAYER_0_MESSAGE_LENGTH, 15
+.equ PLAYER_0_MESSAGE_X, 14
+PLAYER_0_MESSAGE:
+	.word 0x50
+	.word 0x6C
+	.word 0x61
+	.word 0x79
+	.word 0x65
+	.word 0x72
+	.word 0x20
+	.word 0x30 // 0
+	.word 0x27
+	.word 0x73
+	.word 0x20
+	.word 0x74
+	.word 0x75
+	.word 0x72
+	.word 0x6E
+
+// "Player 1's turn"
+// 15 characters, 2 spaces
+.equ PLAYER_1_MESSAGE_LENGTH, 15
+.equ PLAYER_1_MESSAGE_X, 14
+PLAYER_1_MESSAGE:
+	.word 0x50
+	.word 0x6C
+	.word 0x61
+	.word 0x79
+	.word 0x65
+	.word 0x72
+	.word 0x20
+	.word 0x31 // 1
+	.word 0x27
+	.word 0x73
+	.word 0x20
+	.word 0x74
+	.word 0x75
+	.word 0x72
+	.word 0x6E
+
+	
 // "PLAYER 0 WINS!"
 // 14 characters, 2 spaces
 .equ WINNING_MESSAGE_LENGTH, 14
@@ -383,105 +426,95 @@ _start:
 	PUSH {LR}
 	BL draw_grid_ASM
 	POP {LR}
-	
-	// write '0' at (70, 66)
-	MOV R0, #0
-	MOV R1, #0
-	LDR R2, =PURPLE
-	LDR R3, =SPACE_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #1
-	MOV R1, #0
-	LDR R2, =ORANGE
-	LDR R3, =BITCOIN_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #2
-	MOV R1, #0
-	LDR R2, =GREEN
-	LDR R3, =STONKS_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #1
-	MOV R1, #1
-	LDR R2, =PINK
-	LDR R3, =X_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #2
-	MOV R1, #2
-	LDR R2, =BLUE
-	LDR R3, =SQUARE_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #1
-	MOV R1, #2
-	LDR R2, =RED
-	LDR R3, =TRIANGLE_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #0
-	MOV R1, #2
-	LDR R2, =YELLOW
-	LDR R3, =CIRCLE_ROWS
-	PUSH {LR}
-	BL draw_mark_ASM
-	POP {LR}
-	
-	MOV R0, #8
-	LDR R1, =DRAW_MESSAGE
-	LDR R3, =DRAW_MESSAGE_LENGTH
-	PUSH {LR}
-	BL write_string_ASM
-	POP {LR}
 
     // game starts on '0' keyboard input
+WAIT_FOR_START_LOOP:
+	PUSH {LR}
+	BL get_player_input_ASM
+	POP {LR}
+	
+	CMP R1, #1
+	BNE WAIT_FOR_START_LOOP
+	
+	CMP R0, #0
+	BNE WAIT_FOR_START_LOOP
+	// if get_player_input_ASM == 0, exit loop and enter GAME_LOOP
 	
 	// setup player turn (0: player0 / 1: player1)
 	MOV R4, #0 // initially X player's turn
 	// setup number of plays (to know if there is a draw)
 	// also avoids checking for a result before move 5
-	MOV R11, #1
+	MOV R11, #0
+	
+	// setup player 0 as purple alien monster
+	LDR R5, =PURPLE
+	LDR R6, =SPACE_ROWS
+	
+	// setup player 1 as orange bitcoin
+	LDR R8, =ORANGE
+	LDR R9, =BITCOIN_ROWS
 
 
 	// enter game loop
 GAME_LOOP:
+    // write whose turn it is at top-center
+	CMP R4, #0
+	LDREQ R0, =PLAYER_0_MESSAGE_X
+	LDRNE R0, =PLAYER_1_MESSAGE_X
+	LDREQ R1, =PLAYER_0_MESSAGE
+	LDRNE R1, =PLAYER_1_MESSAGE
+	LDREQ R2, =PLAYER_0_MESSAGE_LENGTH
+	LDRNE R2, =PLAYER_1_MESSAGE_LENGTH
+	
+	PUSH {LR}
+	BL write_string_ASM
+	POP {LR}
+	
+    // wait for player input
+PLAYER_INPUT_LOOP:
+	// get input
 	PUSH {LR}
 	BL get_player_input_ASM
 	POP {LR}
 	
-	MOV R2, R0
-	MOV R0, #8
-	MOV R1, #1
+	CMP R1, #1
+	BNE PLAYER_INPUT_LOOP
 	
+	MOV R1, R4
+	// check if valid move, if not, repeat
 	PUSH {LR}
-	BL VGA_write_char_ASM
+	BL validate_move_ASM
 	POP {LR}
-
-    // write whose turn it is at top-center
-
-    // wait for player input and display it (X / O)
-
-    // repeat for other player
-
-    // when game over, display result
+	
+	// display move
+	
+	
+	// update move counter
+	ADD R11, #1
+	
+	CMP R11, #5
+	BLT UPDATE_GAME_LOOP
+	
+	// if at least 5 move played, check if someone has won
+	PUSH {LR}
+	BL check_result_ASM
+	POP {LR}
+	
+	// check result
+	CMP R0, #0
+	BNE GAME_OVER
+	
+	
+UPDATE_GAME_LOOP
+	// other player's turn
+	EOR R4, #1
 	B GAME_LOOP
 	
 GAME_OVER:
+	// display result
 	
+	
+	// gracefully exit
 	B END
 // ------------------------------------------------------------------------------------
 // SUBROUTINES
@@ -792,7 +825,7 @@ draw_grid_ASM:
 // R0: position [1,9]
 // R1: move (1: player0 / 2: player1)
 // return
-// R0: 0/1 no/yes
+// R0: 0/{move} 0 if invalid, otherwise returns the move
 validate_move_ASM:
 	PUSH {R4-R6}
 	LDR R4, =GRID
@@ -881,11 +914,6 @@ RETURN_MARK:
     BX LR
 
 
-// R0: player (1 (X) / 2 (O))
-display_turn_ASM:
-    BX LR
-
-
 // checks wether the play is valid (square not filled)
 // also receives '0' when ready to start
 // input
@@ -905,7 +933,7 @@ get_player_input_ASM:
 	
 	CMP R0, #1
 	// player input not valid somehow
-	BNE RETURN_WO_PLAYER_INPUT
+	BNE RETURN_PLAYER_INPUT
 	
 	CMP R1, #0x45
 	
@@ -913,14 +941,16 @@ get_player_input_ASM:
 	MOV R0, #0
 	
 	// workaround for '0'
-	BEQ RETURN_WO_PLAYER_INPUT
+	MOVEQ R1, #1
+	BEQ RETURN_PLAYER_INPUT
 	
 NUM_VERIF_LOOP:
 	LDR R5, [R4], #4 // R5 = *[R4++]
 	
 	// test every input 1 by 1... :(
 	CMP R1, R5
-	BEQ RETURN_WO_PLAYER_INPUT
+	MOVEQ R1, #1
+	BEQ RETURN_PLAYER_INPUT
 	ADD R0, #1
 	
 	CMP R0, #10
@@ -930,9 +960,9 @@ NUM_VERIF_LOOP:
 
 // avoid infinite loop (i.e.: didn't find a character between [0,9]
 STEP_OUT_LOOP:
-	MOV R0, #10
+	MOV R1, #0
 	
-RETURN_WO_PLAYER_INPUT:
+RETURN_PLAYER_INPUT:
 	POP {R4-R5}
 	BX LR
 
@@ -971,9 +1001,15 @@ RETURN_RESULT:
 	POP {R4-R5}
 	BX LR
 
-// R0: winner (0: draw / 1: player0 / 2: player1)
-display_result_ASM:
-    BX LR
+
+// returns x [0,2] and y[0,2] based on move [1,9]
+// input
+// R0: move [1,9]
+// return
+// R0: x [0,2]
+// R1: y [0,2]
+get_move_coordinates_ASM:
+	BX LR
 	
 
 // self-explanatory
