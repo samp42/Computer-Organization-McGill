@@ -431,11 +431,6 @@ _start:
 	PUSH {LR}
 	BL draw_grid_ASM
 	POP {LR}
-	
-	MOV R0, #3
-	PUSH {LR}
-	BL get_move_coordinates_ASM
-	POP {LR}
 
     // game starts on '0' keyboard input
 WAIT_FOR_START_LOOP:
@@ -998,15 +993,22 @@ RETURN_PLAYER_INPUT:
 // return
 // R0: result (0: nothing yet / 1: player0 won / 2: player 2 won / 3: draw)
 check_result_ASM:
-	PUSH {R4-R5}
+	PUSH {R4-R6}
 	LDR R4, =GRID
-	LDR R5, [R4]
+	MOV R5, #8
+	MOV R6, #4
 	
+CHECK_GRID_LOOP:
 	// check for horizontal line (3 consecutives similar plays)
 	// [0,0] == [1,0] == [2,0] || [0,1] == [1,1] == [2,1] || [0,2] == [1,2] == [2,2]
+	MUL R7, R5, R6
+	LDR R7, [R4, R7]
+	
+	
 	
 	// check for vertical line (3 similar plays at every +3 square)
 	// [0,0] == [0,1] == [0,2] || [1,0] == [1,1] == [1,2] || [2,0] == [2,1] == [2,2]
+	
 	
 	// check for left diagonal
 	// [0,0] == [1,1] == [2,2]
@@ -1014,6 +1016,9 @@ check_result_ASM:
 	
 	// check for right diagonal
 	// [2,0] == [1,1] == [0,2]
+	SUBS R6, #1
+	
+	BGE CHECK_GRID_LOOP
 	
 	// check for draw
 	// have already checked if someone won, so if we reach this case and number of plays is 9,
@@ -1025,7 +1030,7 @@ check_result_ASM:
 	MOVNE R0, #0
 	
 RETURN_RESULT:
-	POP {R4-R5}
+	POP {R4-R6}
 	BX LR
 
 
