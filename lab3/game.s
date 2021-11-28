@@ -486,8 +486,26 @@ PLAYER_INPUT_LOOP:
 	BL validate_move_ASM
 	POP {LR}
 	
-	// display move
+	// if move not valid, get other input
+	CMP R0, #0
+	BEQ PLAYER_INPUT_LOOP
 	
+	// get move coordinates
+	PUSH {LR}
+	BL get_move_coordinates_ASM
+	POP {LR}
+	
+	
+	// display move
+	CMP R4, #0
+	MOVEQ R2, R5
+	MOVNE R2, R8
+	MOVEQ R3, R6
+	MOVNE R3, R9
+	
+	PUSH {LR}
+	BL draw_mark_ASM
+	POP {LR}
 	
 	// update move counter
 	ADD R11, #1
@@ -505,7 +523,7 @@ PLAYER_INPUT_LOOP:
 	BNE GAME_OVER
 	
 	
-UPDATE_GAME_LOOP
+UPDATE_GAME_LOOP:
 	// other player's turn
 	EOR R4, #1
 	B GAME_LOOP
@@ -1009,6 +1027,24 @@ RETURN_RESULT:
 // R0: x [0,2]
 // R1: y [0,2]
 get_move_coordinates_ASM:
+	PUSH {R4-R5}
+	SUB R4, R0, #1
+	
+	// y = move / 3
+	PUSH {LR}
+	BL divide_ASM
+	POP {LR}
+	
+	MOV R5, R0
+	
+	// x = move % 3
+	PUSH {LR}
+	BL modulo_ASM
+	POP {LR}
+	
+	MOV R1, R5
+	
+	POP {R4-R5}
 	BX LR
 	
 
@@ -1034,6 +1070,25 @@ modulo_ASM:
 RETURN_MODULO:
 	BX LR
 	
+	
+// self-explanatory
+// input
+// R0: x1
+// R1: x2
+// return
+// R0: x1 / x2
+divide_ASM:
+	PUSH {R4}
+	
+	MOV R4, #0
+
+DIVIDE_LOOP:
+	SUBS R0, R1
+	ADDGE R4, #1
+	BGE DIVIDE_LOOP
+	
+	POP {R4}
+	BX LR
 	
 END:
     B END
