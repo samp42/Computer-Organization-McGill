@@ -75,7 +75,7 @@ START_MESSAGE:
 // "Player 0's turn"
 // 15 characters, 2 spaces
 .equ PLAYER_0_MESSAGE_LENGTH, 15
-.equ PLAYER_0_MESSAGE_X, 14
+.equ PLAYER_0_MESSAGE_X, 33
 PLAYER_0_MESSAGE:
 	.word 0x50
 	.word 0x6C
@@ -96,7 +96,7 @@ PLAYER_0_MESSAGE:
 // "Player 1's turn"
 // 15 characters, 2 spaces
 .equ PLAYER_1_MESSAGE_LENGTH, 15
-.equ PLAYER_1_MESSAGE_X, 14
+.equ PLAYER_1_MESSAGE_X, 33
 PLAYER_1_MESSAGE:
 	.word 0x50
 	.word 0x6C
@@ -971,24 +971,24 @@ get_player_input_ASM:
 	BNE RETURN_PLAYER_INPUT
 	
 	// first look for #0xFO (break code)
-	PUSH {LR}
-	BL read_PS2_data_ASM
-	POP {LR}
+	//PUSH {LR}
+	//BL read_PS2_data_ASM
+	//POP {LR}
 	
-	CMP R0, #1
+	//CMP R0, #1
 	// player input not valid somehow
-	BNE RETURN_PLAYER_INPUT
+	//BNE RETURN_PLAYER_INPUT
 	
-	CMP R1, #0xF0
-	BNE RETURN_PLAYER_INPUT
+	//CMP R1, #0xF0
+	//BNE RETURN_PLAYER_INPUT
 	
-	PUSH {LR}
-	BL read_PS2_data_ASM
-	POP {LR}
+	//PUSH {LR}
+	//BL read_PS2_data_ASM
+	//POP {LR}
 	
-	CMP R0, #1
+	//CMP R0, #1
 	// player input not valid somehow
-	BNE RETURN_PLAYER_INPUT
+	//BNE RETURN_PLAYER_INPUT
 	
 	CMP R1, #0x45
 	
@@ -1026,16 +1026,18 @@ RETURN_PLAYER_INPUT:
 // return
 // R0: result (0: nothing yet / 1: player0 won / 2: player 2 won / 3: draw)
 check_result_ASM:
-	PUSH {R4-R7}
+	PUSH {R4-R8}
 	LDR R4, =GRID
 	MOV R5, #8
-	MOV R6, #4
+	MOV R6, #2 // inner loop
+	MOV R7, #2 // outer loop
 	
+	// loop for horizontal and vertical lines since there are 3 possibilities for each
 CHECK_GRID_LOOP:
 	// check for horizontal line (3 consecutives similar plays)
 	// [0,0] == [1,0] == [2,0] || [0,1] == [1,1] == [2,1] || [0,2] == [1,2] == [2,2]
-	MUL R7, R5, R6
-	LDR R7, [R4, R7]
+	MUL R8, R5, R6
+	LDR R8, [R4, R8]
 	
 	
 	
@@ -1043,8 +1045,11 @@ CHECK_GRID_LOOP:
 	// [0,0] == [0,1] == [0,2] || [1,0] == [1,1] == [1,2] || [2,0] == [2,1] == [2,2]
 	
 	SUBS R6, #1
-	
 	BGE CHECK_GRID_LOOP
+	
+	// reset inner loop counter
+	MOV R6, #3
+	
 	
 	// check for left diagonal
 	// [0,0] == [1,1] == [2,2]
@@ -1053,6 +1058,9 @@ CHECK_GRID_LOOP:
 	// check for right diagonal
 	// [2,0] == [1,1] == [0,2]
 	
+	
+	SUBS R7, #1
+	BGE CHECK_GRID_LOOP
 	
 	// check for draw
 	// have already checked if someone won, so if we reach this case and number of plays is 9,
@@ -1064,7 +1072,7 @@ CHECK_GRID_LOOP:
 	MOVNE R0, #0
 	
 RETURN_RESULT:
-	POP {R4-R7}
+	POP {R4-R8}
 	BX LR
 
 
