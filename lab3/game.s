@@ -917,13 +917,8 @@ draw_mark_ASM:
 	ADD R5, #12 // y coordinates 3 words further in memory, saves a LDR
 	MLA R5, R1, R6, R5
 	LDR R5, [R5]
-	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
-	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
-	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
-	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
-	// RANDOM NUMBERS I DON'T KNOW WHY THIS IS THE WAY IT IS
-	ADD R1, R5, #0 // start at edge of character
-	MOV R6, R1 // save for later, because need to reset
+	MOV R1, R5 // start at edge of character
+	MOV R6, R1 // save for later because need to reset
 	
 	MOV R7, #30 // width (columns - 1), aka x
 	MOV R8, #30 // height (rows - 1), aka y
