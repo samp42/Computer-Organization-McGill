@@ -46,7 +46,7 @@ NUMBERS:
 // "Please press 0 to start"
 // 23 characters, 4 spaces
 .equ START_MESSAGE_LENGTH, 23
-.equ START_MESSAGE_X, 10
+.equ START_MESSAGE_X, 28
 START_MESSAGE:
 	.word 0x50
 	.word 0x6C
@@ -431,6 +431,15 @@ _start:
 	PUSH {LR}
 	BL draw_grid_ASM
 	POP {LR}
+	
+	// display start message
+	LDR R0, =START_MESSAGE_X
+	LDR R1, =START_MESSAGE
+	LDR R3, =START_MESSAGE_LENGTH
+	
+	PUSH {LR}
+	BL write_string_ASM
+	POP {LR}
 
     // game starts on '0' keyboard input
 WAIT_FOR_START_LOOP:
@@ -649,8 +658,7 @@ write_string_ASM:
 	
 	// for(0...message length) { print character, x++}
 WRITE_STRING_LOOP:
-	LDR R2, [R4]
-	ADD R4, #4
+	LDR R2, [R4], #4
 	
 	PUSH {LR}
 	BL VGA_write_char_ASM
