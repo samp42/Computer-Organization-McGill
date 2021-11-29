@@ -494,14 +494,14 @@ PLAYER_INPUT_LOOP:
 	CMP R1, #1
 	BNE PLAYER_INPUT_LOOP
 	
-	MOV R1, R4
 	// check if valid move, if not, repeat
+	ADD R1, R4, #1
 	PUSH {LR}
 	BL validate_move_ASM
 	POP {LR}
 	
 	// if move not valid, get other input
-	CMP R0, #0
+	CMP R1, #0
 	BEQ PLAYER_INPUT_LOOP
 	
 	// get move coordinates
@@ -666,7 +666,7 @@ WRITE_STRING_LOOP:
 	
 	ADD R0, #1
 	SUBS R3, #1
-	BGE WRITE_STRING_LOOP
+	BGT WRITE_STRING_LOOP
 	
 	POP {R4}
 	BX LR
@@ -855,19 +855,23 @@ draw_grid_ASM:
 // R0: position [1,9]
 // R1: move (1: player0 / 2: player1)
 // return
-// R0: 0/{move} 0 if invalid, otherwise returns the move
+// R1: 0/{move'} 0 if invalid, otherwise returns the move (1/2)
 validate_move_ASM:
 	PUSH {R4-R6}
 	LDR R4, =GRID
 	MOV R5, #4
+	
 	// use 0-8 instead of 1-9 to fetch list of moves
 	SUB R6, R0, #1
 	MLA R6, R6, R5, R4
 	LDR R4, [R6]
 	
 	// record move if no previous move at that square
-	TEQ R4, #0
-	STREQ R0, [R6]
+	CMP R4, #0
+	STREQ R1, [R6]
+	
+	// there is a move, return 0 (invalid)
+	MOVNE R1, #0
 	
 	POP {R4-R6}
 	BX LR
@@ -956,6 +960,15 @@ get_player_input_ASM:
 	
 	LDR R4, =NUMBERS
 	MOV R0, #10 // invalid character
+	
+	// make code
+	PUSH {LR}
+	BL read_PS2_data_ASM
+	POP {LR}
+	
+	CMP R0, #1
+	// player input not valid somehow
+	BNE RETURN_PLAYER_INPUT
 	
 	// first look for #0xFO (break code)
 	PUSH {LR}
