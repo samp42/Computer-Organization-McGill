@@ -118,7 +118,7 @@ PLAYER_1_MESSAGE:
 // "PLAYER 0 WINS!"
 // 14 characters, 2 spaces
 .equ WINNING_MESSAGE_LENGTH, 14
-.equ WINNING_MESSAGE_X, 10
+.equ WINNING_MESSAGE_X, 33
 WINNING_MESSAGE_0:
 	.word 0x50
 	.word 0x4C
@@ -543,7 +543,24 @@ UPDATE_GAME_LOOP:
 	
 GAME_OVER:
 	// display result
+	CMP R0, #1 // player 0 won
+	LDREQ R0, =WINNING_MESSAGE_X
+	LDREQ R1, =WINNING_MESSAGE_0
+	LDREQ R3, =WINNING_MESSAGE_LENGTH
 	
+	CMP R0, #2 // player 1 won
+	LDREQ R0, =WINNING_MESSAGE_X
+	LDREQ R1, =WINNING_MESSAGE_1
+	LDREQ R3, =WINNING_MESSAGE_LENGTH
+	
+	CMP R0, #3 // draw
+	LDREQ R0, =DRAW_MESSAGE_X
+	LDREQ R1, =DRAW_MESSAGE
+	LDREQ R3, =DRAW_MESSAGE_LENGTH
+	
+	PUSH {LR}
+	BL write_string_ASM
+	POP {LR}
 	
 	// gracefully exit
 	B END
@@ -1026,45 +1043,172 @@ RETURN_PLAYER_INPUT:
 // return
 // R0: result (0: nothing yet / 1: player0 won / 2: player 2 won / 3: draw)
 check_result_ASM:
-	PUSH {R4-R8}
+	PUSH {R4-R9}
 	LDR R4, =GRID
-	MOV R5, #8
-	MOV R6, #2 // inner loop
-	MOV R7, #2 // outer loop
+	MOV R5, #2 // loop counter
 	
 	// loop for horizontal and vertical lines since there are 3 possibilities for each
 CHECK_GRID_LOOP:
 	// check for horizontal line (3 consecutives similar plays)
 	// [0,0] == [1,0] == [2,0] || [0,1] == [1,1] == [2,1] || [0,2] == [1,2] == [2,2]
-	MUL R8, R5, R6
-	LDR R8, [R4, R8]
+	CMP R5, #0
+	BNE HOR_1
+	LDR R7, [R4] 		// [0,0]
+	LDR R8, [R4, #12]	// [1,0]
+	LDR R9, [R4, #24]	// [2,0]
 	
+	CMP R7, R8
+	BNE HOR_1
 	
+	CMP R8, R9
+	BNE HOR_1
+	
+	// line is a win!
+	CMP R7, #0
+	BEQ HOR_1
+	MOVNE R0, R7
+	BNE RETURN_RESULT
+	
+HOR_1:
+	CMP R5, #1
+	BNE HOR_2
+	LDR R7, [R4, #4] 	// [0,1]
+	LDR R8, [R4, #16]	// [1,1]
+	LDR R9, [R4, #28]	// [2,1]
+	
+	CMP R7, R8
+	BNE HOR_2
+	
+	CMP R8, R9
+	BNE HOR_2
+	
+	// line is a win!
+	CMP R7, #0
+	BEQ HOR_2
+	MOVNE R0, R7
+	BNE RETURN_RESULT
+	
+HOR_2:
+	CMP R5, #2
+	BNE VER_0
+	LDR R7, [R4, #8] 	// [0,2]
+	LDR R8, [R4, #20]	// [1,2]
+	LDR R9, [R4, #32]	// [2,2]
+	
+	CMP R7, R8
+	BNE VER_0
+	
+	CMP R8, R9
+	BNE VER_0
+	
+	// line is a win!
+	CMP R7, #0
+	BEQ VER_0
+	MOVNE R0, R7
+	BNE RETURN_RESULT
 	
 	// check for vertical line (3 similar plays at every +3 square)
 	// [0,0] == [0,1] == [0,2] || [1,0] == [1,1] == [1,2] || [2,0] == [2,1] == [2,2]
+VER_0:
+	CMP R5, #0
+	BNE VER_1
+	LDR R7, [R4] 		// [0,0]
+	LDR R8, [R4, #4]	// [0,1]
+	LDR R9, [R4, #8]	// [0,2]
 	
-	SUBS R6, #1
+	CMP R7, R8
+	BNE VER_1
+	
+	CMP R8, R9
+	BNE VER_1
+	
+	// line is a win!
+	CMP R7, #0
+	BEQ VER_1
+	MOVNE R0, R7
+	BNE RETURN_RESULT
+	
+VER_1:
+	CMP R5, #1
+	BNE VER_2
+	LDR R7, [R4, #12] 	// [1,0]
+	LDR R8, [R4, #16]	// [1,1]
+	LDR R9, [R4, #20]	// [1,2]
+	
+	CMP R7, R8
+	BNE VER_2
+	
+	CMP R8, R9
+	BNE VER_2
+	
+	// line is a win!
+	CMP R7, #0
+	BEQ VER_2
+	MOVNE R0, R7
+	BNE RETURN_RESULT
+	
+VER_2:
+	CMP R5, #2
+	BNE CHECK_GRID_LOOP_UPDATE
+	LDR R7, [R4, #24] 	// [2,0]
+	LDR R8, [R4, #28]	// [2,1]
+	LDR R9, [R4, #32]	// [2,2]
+	
+	CMP R7, R8
+	BNE CHECK_GRID_LOOP_UPDATE
+	
+	CMP R8, R9
+	BNE CHECK_GRID_LOOP_UPDATE
+	
+	// line is a win!
+	CMP R7, #0
+	BEQ CHECK_GRID_LOOP_UPDATE
+	MOVNE R0, R7
+	BNE RETURN_RESULT
+	
+	
+CHECK_GRID_LOOP_UPDATE:
+	SUBS R5, #1
 	BGE CHECK_GRID_LOOP
-	
-	// reset inner loop counter
-	MOV R6, #3
-	
 	
 	// check for left diagonal
 	// [0,0] == [1,1] == [2,2]
+LEFT_DIAGONAL:
+	LDR R7, [R4] 		// [0,0]
+	LDR R8, [R4, #16]	// [1,1]
+	LDR R9, [R4, #32]	// [2,2]
 	
+	CMP R7, R8
+	BNE RIGHT_DIAGONAL
+	
+	CMP R8, R9
+	BNE RIGHT_DIAGONAL
+	
+	// left diagonal is a win!
+	MOVEQ R0, R7
+	BEQ RETURN_RESULT
 	
 	// check for right diagonal
 	// [2,0] == [1,1] == [0,2]
+RIGHT_DIAGONAL:
+	LDR R7, [R4, #24] 	// [2,0]
+	LDR R8, [R4, #16]	// [1,1]
+	LDR R9, [R4, #8]	// [0,2]
 	
+	CMP R7, R8
+	BNE DRAW
 	
-	SUBS R7, #1
-	BGE CHECK_GRID_LOOP
+	CMP R8, R9
+	BNE DRAW
+	
+	// left diagonal is a win!
+	MOVEQ R0, R7
+	BEQ RETURN_RESULT
 	
 	// check for draw
 	// have already checked if someone won, so if we reach this case and number of plays is 9,
 	// there is a draw
+DRAW:
 	CMP R11, #9
 	MOVEQ R0, #3
 	
@@ -1072,7 +1216,7 @@ CHECK_GRID_LOOP:
 	MOVNE R0, #0
 	
 RETURN_RESULT:
-	POP {R4-R8}
+	POP {R4-R9}
 	BX LR
 
 
