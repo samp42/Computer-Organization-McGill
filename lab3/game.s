@@ -949,6 +949,18 @@ get_player_input_ASM:
 	LDR R4, =NUMBERS
 	MOV R0, #10 // invalid character
 	
+	// first look for #0xFO (break code)
+	PUSH {LR}
+	BL read_PS2_data_ASM
+	POP {LR}
+	
+	CMP R0, #1
+	// player input not valid somehow
+	BNE RETURN_PLAYER_INPUT
+	
+	CMP R1, #0xF0
+	BNE RETURN_PLAYER_INPUT
+	
 	PUSH {LR}
 	BL read_PS2_data_ASM
 	POP {LR}
@@ -993,7 +1005,7 @@ RETURN_PLAYER_INPUT:
 // return
 // R0: result (0: nothing yet / 1: player0 won / 2: player 2 won / 3: draw)
 check_result_ASM:
-	PUSH {R4-R6}
+	PUSH {R4-R7}
 	LDR R4, =GRID
 	MOV R5, #8
 	MOV R6, #4
@@ -1009,6 +1021,9 @@ CHECK_GRID_LOOP:
 	// check for vertical line (3 similar plays at every +3 square)
 	// [0,0] == [0,1] == [0,2] || [1,0] == [1,1] == [1,2] || [2,0] == [2,1] == [2,2]
 	
+	SUBS R6, #1
+	
+	BGE CHECK_GRID_LOOP
 	
 	// check for left diagonal
 	// [0,0] == [1,1] == [2,2]
@@ -1016,9 +1031,7 @@ CHECK_GRID_LOOP:
 	
 	// check for right diagonal
 	// [2,0] == [1,1] == [0,2]
-	SUBS R6, #1
 	
-	BGE CHECK_GRID_LOOP
 	
 	// check for draw
 	// have already checked if someone won, so if we reach this case and number of plays is 9,
@@ -1030,7 +1043,7 @@ CHECK_GRID_LOOP:
 	MOVNE R0, #0
 	
 RETURN_RESULT:
-	POP {R4-R6}
+	POP {R4-R7}
 	BX LR
 
 
